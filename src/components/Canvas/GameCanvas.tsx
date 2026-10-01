@@ -31,7 +31,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   onSuccess
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [readout, setReadout] = useState<ReadoutData>({ x: 40, y: 218, vx: 0, vy: 0, fps: 60 });
+  const [coordMode, setCoordMode] = useState<'screen' | 'math'>('math');
+  const [showCoordExplainer, setShowCoordExplainer] = useState(false);
+  const coordModeRef = useRef<'screen' | 'math'>('math');
+  coordModeRef.current = coordMode;
+
+  const [readout, setReadout] = useState<ReadoutData>({ x: 40, y: 0, vx: 0, vy: 0, fps: 60 });
   const [isGameOver, setIsGameOver] = useState(false);
 
   // Initialize World Config with entities driven dynamically by user code
@@ -332,6 +337,106 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillStyle = 'rgba(37, 43, 59, 0.2)';
       ctx.fillRect(0, groundY, worldW, worldH - groundY);
 
+      // Draw Visual Coordinate Axis Widget (Origin & Direction Indicators)
+      const axisOriginX = 24;
+      ctx.save();
+      if (coordModeRef.current === 'math') {
+        // Math / Cartesian mode: Origin is at ground level, +Y points UP
+        const axisOriginY = groundY;
+
+        ctx.strokeStyle = 'rgba(79, 209, 197, 0.65)';
+        ctx.fillStyle = '#4FD1C5';
+        ctx.lineWidth = 1.5;
+
+        // Vertical +Y Axis (Pointing UP from ground)
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX, axisOriginY);
+        ctx.lineTo(axisOriginX, axisOriginY - 55);
+        ctx.stroke();
+
+        // Arrow head UP
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX - 3.5, axisOriginY - 48);
+        ctx.lineTo(axisOriginX, axisOriginY - 57);
+        ctx.lineTo(axisOriginX + 3.5, axisOriginY - 48);
+        ctx.stroke();
+
+        // Label +Y UP
+        ctx.font = 'bold 9px "JetBrains Mono", monospace';
+        ctx.fillText('+Y (UP)', axisOriginX + 6, axisOriginY - 48);
+
+        // Horizontal +X Axis (Pointing RIGHT along ground)
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX, axisOriginY);
+        ctx.lineTo(axisOriginX + 55, axisOriginY);
+        ctx.stroke();
+
+        // Arrow head RIGHT
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX + 48, axisOriginY - 3.5);
+        ctx.lineTo(axisOriginX + 57, axisOriginY);
+        ctx.lineTo(axisOriginX + 48, axisOriginY + 3.5);
+        ctx.stroke();
+
+        // Label +X RIGHT
+        ctx.fillText('+X', axisOriginX + 48, axisOriginY - 5);
+
+        // Origin circle (0,0) at Ground
+        ctx.beginPath();
+        ctx.arc(axisOriginX, axisOriginY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = 'bold 8px "JetBrains Mono", monospace';
+        ctx.fillText('(0,0) GROUND', axisOriginX + 6, axisOriginY + 11);
+      } else {
+        // Screen / Raster mode: Origin is at top-left roof, +Y points DOWN
+        const axisOriginY = 18;
+
+        ctx.strokeStyle = 'rgba(240, 169, 78, 0.65)';
+        ctx.fillStyle = '#F0A94E';
+        ctx.lineWidth = 1.5;
+
+        // Vertical +Y Axis (Pointing DOWN from roof)
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX, axisOriginY);
+        ctx.lineTo(axisOriginX, axisOriginY + 50);
+        ctx.stroke();
+
+        // Arrow head DOWN
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX - 3.5, axisOriginY + 44);
+        ctx.lineTo(axisOriginX, axisOriginY + 52);
+        ctx.lineTo(axisOriginX + 3.5, axisOriginY + 44);
+        ctx.stroke();
+
+        // Label +Y DOWN
+        ctx.font = 'bold 9px "JetBrains Mono", monospace';
+        ctx.fillText('+Y (DOWN)', axisOriginX + 6, axisOriginY + 48);
+
+        // Horizontal +X Axis (Pointing RIGHT along roof)
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX, axisOriginY);
+        ctx.lineTo(axisOriginX + 50, axisOriginY);
+        ctx.stroke();
+
+        // Arrow head RIGHT
+        ctx.beginPath();
+        ctx.moveTo(axisOriginX + 44, axisOriginY - 3.5);
+        ctx.lineTo(axisOriginX + 52, axisOriginY);
+        ctx.lineTo(axisOriginX + 44, axisOriginY + 3.5);
+        ctx.stroke();
+
+        // Label +X
+        ctx.fillText('+X', axisOriginX + 45, axisOriginY - 4);
+
+        // Origin circle (0,0) at Roof
+        ctx.beginPath();
+        ctx.arc(axisOriginX, axisOriginY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = 'bold 8px "JetBrains Mono", monospace';
+        ctx.fillText('(0,0) ROOF', axisOriginX + 6, axisOriginY + 11);
+      }
+      ctx.restore();
+
       // Draw Platform (Collision Box: Driven dynamically by world.platform)
       const p = world.platform;
       if (p && typeof p.x === 'number' && typeof p.y === 'number' && typeof p.w === 'number' && typeof p.h === 'number') {
@@ -523,11 +628,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       // Update Readouts state (throttled at 10Hz to prevent React re-render stutter)
       if (timestamp - lastReadoutTime > 100) {
         lastReadoutTime = timestamp;
+        const gY = typeof world.groundY === 'number' ? world.groundY : 240;
+        const pH = state.height || 22;
+
+        let displayY = Math.round(state.y);
+        let displayVy = Math.round(isGameOverRef.current ? 0 : state.vy || 0);
+
+        if (coordModeRef.current === 'math') {
+          // In math mode: Ground level is altitude 0. Going up is +Y.
+          displayY = Math.round((gY - pH) - state.y);
+          // Moving up in canvas is -vy, which is +vy in math coordinates!
+          displayVy = -displayVy;
+        }
+
         setReadout({
           x: Math.round(state.x),
-          y: Math.round(state.y),
+          y: displayY,
           vx: Math.round(isGameOverRef.current ? 0 : state.vx || 0),
-          vy: Math.round(isGameOverRef.current ? 0 : state.vy || 0),
+          vy: displayVy,
           fps: Math.round(fpsSmooth)
         });
       }
@@ -543,6 +661,37 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         <div className="label">
           <span>simulation canvas</span>
         </div>
+
+        {/* Coordinate Mode Toggle (Math Cartesian vs Screen Raster) */}
+        <div className="canvas-header-controls">
+          <div className="coord-mode-selector">
+            <button
+              type="button"
+              className={`coord-btn ${coordMode === 'math' ? 'active' : ''}`}
+              onClick={() => setCoordMode('math')}
+              title="Cartesian Math Mode: Ground = 0, +Y is UP"
+            >
+              📐 Math (+Y Up)
+            </button>
+            <button
+              type="button"
+              className={`coord-btn ${coordMode === 'screen' ? 'active' : ''}`}
+              onClick={() => setCoordMode('screen')}
+              title="Screen / Raster Mode: Roof = 0, +Y is DOWN"
+            >
+              🖥️ Screen (+Y Down)
+            </button>
+          </div>
+          <button
+            type="button"
+            className="coord-info-btn"
+            onClick={() => setShowCoordExplainer(prev => !prev)}
+            title="Learn why 2D graphics traditionally use Roof = 0"
+          >
+            ?
+          </button>
+        </div>
+
         <div className="keys-hint">
           <span className="key">← → ↑ ↓</span>
           <span className="key">WASD</span>
@@ -551,6 +700,25 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       </div>
 
       <div className="sim-body">
+        {/* Educational Coordinate System Explainer Dropdown */}
+        {showCoordExplainer && (
+          <div className="coord-explainer-card">
+            <div className="coord-explainer-header">
+              <span className="coord-explainer-title">📐 Why does 2D Computer Graphics use Roof = 0?</span>
+              <button type="button" className="coord-explainer-close" onClick={() => setShowCoordExplainer(false)}>✕</button>
+            </div>
+            <p>
+              In <strong>Mathematics & Physics (Cartesian)</strong>, <code>(0,0)</code> is at the ground level and <code>+Y</code> points <strong>UP</strong>.
+            </p>
+            <p>
+              In <strong>2D Computer Graphics (HTML5 Canvas, Pygame, Godot 2D)</strong>, <code>(0,0)</code> is at the top-left ceiling (roof) and <code>+Y</code> points <strong>DOWN</strong>. This originated from cathode-ray tube (CRT) television monitors scanning pixels row-by-row from top to bottom!
+            </p>
+            <p className="coord-explainer-tip">
+              💡 <strong>BitBuild Feature:</strong> Toggle between <strong>Math Mode</strong> (Ground = 0, +Y Up) and <strong>Screen Mode</strong> (Roof = 0, +Y Down) above to see both perspectives live!
+            </p>
+          </div>
+        )}
+
         <div className="canvas-container">
           <canvas
             ref={canvasRef}
@@ -584,7 +752,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             x <b className="val-teal">{readout.x}</b>
           </span>
           <span>
-            y <b className="val-teal">{readout.y}</b>
+            y <b className="val-teal">{readout.y}</b>{' '}
+            <span style={{ fontSize: '10px', opacity: 0.7 }}>
+              {coordMode === 'math' ? '(altitude ↑)' : '(screen ↓)'}
+            </span>
           </span>
           <span>
             vx <b className="val-teal">{readout.vx}</b>

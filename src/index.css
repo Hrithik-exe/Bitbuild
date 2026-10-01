@@ -299,6 +299,8 @@ html, body {
   padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--panel-alt);
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .panel-head .label {
@@ -525,6 +527,148 @@ canvas {
   border-radius: 5px;
   padding: 3px 7px;
   color: var(--text-muted);
+}
+
+/* Coordinate System Selector & Header Controls */
+.canvas-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coord-mode-selector {
+  display: inline-flex;
+  background: rgba(13, 17, 25, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.coord-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 3px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.coord-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.coord-btn.active {
+  background: var(--panel-alt);
+  color: var(--teal);
+  font-weight: 600;
+  border-color: rgba(92, 225, 230, 0.4);
+  box-shadow: 0 0 10px rgba(92, 225, 230, 0.18);
+}
+
+.coord-info-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 17, 25, 0.85);
+  border: 1px solid var(--border);
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.coord-info-btn:hover {
+  background: var(--amber-dim);
+  border-color: var(--amber);
+  box-shadow: 0 0 10px rgba(240, 169, 78, 0.35);
+  transform: scale(1.05);
+}
+
+/* Educational Coordinate System Explainer Card */
+.coord-explainer-card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(18, 22, 34, 0.96);
+  border: 1px solid var(--teal);
+  box-shadow: 0 6px 24px rgba(92, 225, 230, 0.16);
+  border-radius: 8px;
+  padding: 13px 15px;
+  backdrop-filter: blur(12px);
+  animation: bannerFadeIn 0.2s ease-out;
+  margin-bottom: 2px;
+}
+
+.coord-explainer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(92, 225, 230, 0.2);
+  padding-bottom: 6px;
+}
+
+.coord-explainer-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--teal);
+}
+
+.coord-explainer-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.coord-explainer-close:hover {
+  color: var(--text);
+}
+
+.coord-explainer-card p {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0 0 7px;
+}
+
+.coord-explainer-card p strong {
+  color: var(--text);
+}
+
+.coord-explainer-card code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--amber);
+}
+
+.coord-explainer-tip {
+  background: rgba(92, 225, 230, 0.08);
+  border-left: 3px solid var(--teal);
+  padding: 7px 10px;
+  border-radius: 0 5px 5px 0;
+  margin-bottom: 0 !important;
+  font-size: 11px !important;
 }
 
 /* Lesson Note */

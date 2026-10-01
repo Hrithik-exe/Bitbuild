@@ -42,12 +42,13 @@ export const lessons: Lesson[] = [
       title: 'Reading input & moving a sprite',
       body: [
         'The engine calls your update(state, keys, dt, world) function every animation frame. keys tells you which arrow keys are currently held down, and dt is the time in seconds since the last frame — multiply by dt so movement speed doesn\'t depend on frame rate.',
-        'Try changing speed, or make the player move diagonally faster than it should (a classic bug — fix it by normalizing the vector).'
+        'Try changing speed, or make the player move diagonally faster than it should (a classic bug — fix it by normalizing the vector).',
+        '📐 Coordinates Notice: In 2D game engines and HTML5 canvas, (0,0) is at the top-left ceiling (roof) and +Y points DOWN. If this feels inverted compared to standard graphing, toggle "📐 Math (+Y Up)" above the canvas to see intuitive altitude from the ground!'
       ]
     },
     mentorLines: [
       { speaker: 'mentorA', text: "Welcome to BitBuild! I'm Pixel. Let's start with basic sprite controls.", trigger: 'onEnter' },
-      { speaker: 'mentorB', text: 'Remember: Always scale movement speed by dt! Or else 144Hz monitors will fly away.', trigger: 'onEnter' }
+      { speaker: 'mentorB', text: 'Notice the coordinate mode buttons above the canvas? You can toggle between Math and Screen coordinates anytime!', trigger: 'onEnter' }
     ],
     code: {
       javascript: `// Move the player with the arrow keys
@@ -98,7 +99,8 @@ state.y = std::clamp(state.y, 0.0f, world.height - state.height);`
       title: 'Velocity, acceleration, and a jump',
       body: [
         'Real motion is built from velocity (speed + direction) and acceleration (how velocity changes over time). Gravity is just a constant downward acceleration applied every frame: state.vy += gravity * dt.',
-        'A jump sets a negative vertical velocity instantly, then gravity pulls it back down. state.onGround is there so you can only jump when standing on something — try removing that check and see what happens.'
+        'A jump sets an upward vertical velocity instantly, then gravity pulls it back down. state.onGround is there so you can only jump when standing on something — try removing that check and see what happens.',
+        '📐 Why is jump impulse negative in code? Because 2D canvas coordinates place (0,0) at the roof and +Y downward, so moving UP means decreasing Y (-vy). Switch between "📐 Math (+Y Up)" and "🖥️ Screen (+Y Down)" in the canvas header to see how BitBuild translates this live!'
       ]
     },
     mentorLines: [
