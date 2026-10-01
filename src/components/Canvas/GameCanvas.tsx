@@ -34,6 +34,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const [readout, setReadout] = useState<ReadoutData>({ x: 0, y: 0, vx: 0, vy: 0, fps: 60 });
   const [isGameOver, setIsGameOver] = useState(false);
 
+  // Initialize World Config with entities driven dynamically by user code
+  const initWorld = useCallback((currentLessonId: string): WorldConfig => {
+    return {
+      width: 480,
+      height: 280,
+      groundY: 240,
+      platform: ['collision', 'capstone'].includes(currentLessonId) ? { x: 250, y: 145, w: 120, h: 20 } : null,
+      goal: currentLessonId === 'capstone' ? { x: 416, y: 175, w: 38, h: 65 } : null
+    };
+  }, []);
+
+  const worldRef = useRef<WorldConfig>(initWorld(lessonId));
+
   // Simulation State
   const stateRef = useRef<PlayerState>({
     x: 40,
@@ -45,10 +58,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     onGround: false,
     enemyX: 400,
     enemyY: 70,
+    enemyRadius: 10,
     score: 0,
     coins: [
-      { x: 330, y: 110, collected: false },
-      { x: 180, y: 180, collected: false },
+      { x: 300, y: 115, collected: false },
+      { x: 160, y: 185, collected: false },
       { x: 360, y: 215, collected: false }
     ]
   });
@@ -66,14 +80,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const lessonIdRef = useRef(lessonId);
   lessonIdRef.current = lessonId;
 
-  const worldConfig: WorldConfig = {
-    width: 480,
-    height: 280,
-    groundY: 240,
-    platform: { x: 280, y: 145, w: 100, h: 18 },
-    goal: { x: 416, y: 180, w: 38, h: 60 }
-  };
-
   // Respawn / Reset Player Function
   const respawn = useCallback(() => {
     isGameOverRef.current = false;
@@ -81,18 +87,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     deathParticlesRef.current = [];
     shakeTimeRef.current = 0;
 
+    // Reset world entities according to current lesson defaults
+    worldRef.current = initWorld(lessonIdRef.current);
+
     stateRef.current.x = 40;
     stateRef.current.y = 40;
     stateRef.current.vx = 0;
     stateRef.current.vy = 0;
+    stateRef.current.width = 22;
+    stateRef.current.height = 22;
     stateRef.current.onGround = false;
     stateRef.current.enemyX = 400;
     stateRef.current.enemyY = 70;
+    stateRef.current.enemyRadius = 10;
 
     if (lessonIdRef.current === 'capstone') {
       stateRef.current.coins = [
-        { x: 330, y: 110, collected: false },
-        { x: 180, y: 180, collected: false },
+        { x: 300, y: 115, collected: false },
+        { x: 160, y: 185, collected: false },
         { x: 360, y: 215, collected: false }
       ];
       stateRef.current.score = 0;
@@ -102,7 +114,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     keysRef.current.right = false;
     keysRef.current.up = false;
     keysRef.current.down = false;
-  }, []);
+  }, [initWorld]);
 
   // Trigger Death Sequence
   const triggerDeath = useCallback(() => {
@@ -112,8 +124,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     shakeTimeRef.current = 0.45;
     blipAudio.playDeathTone();
 
-    const px = stateRef.current.x + stateRef.current.width / 2;
-    const py = stateRef.current.y + stateRef.current.height / 2;
+    const px = stateRef.current.x + (stateRef.current.width || 22) / 2;
+    const py = stateRef.current.y + (stateRef.current.height || 22) / 2;
     const particles: DebrisParticle[] = [];
     const colors = ['#F0A94E', '#F0616B', '#FFD166', '#FF4757', '#FFFFFF', '#FFA07A'];
 
@@ -220,16 +232,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
+      const world = worldRef.current;
+      const worldW = world.width || 480;
+      const worldH = world.height || 280;
+
       // Update simulation if player is alive
       if (!isGameOverRef.current) {
-        // Execute code update function
+        // Execute code update function: passes mutable state and mutable world
         if (updateFn) {
           try {
             updateFn(
               state as unknown as Record<string, unknown>,
               keys,
               dt,
-              worldConfig as unknown as Record<string, unknown>
+              world as unknown as Record<string, unknown>
             );
           } catch {
             // Runtime error handled by parent status
@@ -237,24 +253,26 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
 
         // Check Enemy Collision (Death Animation Trigger)
-        const hasEnemy = ['chase', 'capstone'].includes(lessonId);
+        const hasEnemy = typeof state.enemyX === 'number' && typeof state.enemyY === 'number' &&
+          (['chase', 'capstone'].includes(lessonId) || state.enemyX > 0);
         if (hasEnemy && !isWon) {
-          const px = state.x + state.width / 2;
-          const py = state.y + state.height / 2;
+          const px = state.x + (state.width || 22) / 2;
+          const py = state.y + (state.height || 22) / 2;
           const distToEnemy = Math.hypot(px - state.enemyX, py - state.enemyY);
-          if (distToEnemy < 18) {
+          const hitRadius = ((state.width || 22) / 2) + (state.enemyRadius || 10) - 3;
+          if (distToEnemy < hitRadius) {
             triggerDeath();
           }
         }
 
-        // Capstone Win Condition Check (Accurate 2D AABB Hitbox)
-        if (lessonId === 'capstone' && !isWon) {
-          const g = worldConfig.goal;
+        // Capstone Win Condition Check (Dynamic portal hitbox)
+        const currentGoal = world.goal;
+        if (currentGoal && lessonId === 'capstone' && !isWon) {
           const playerHitsGoal =
-            state.x < g.x + g.w &&
-            state.x + state.width > g.x &&
-            state.y < g.y + g.h &&
-            state.y + state.height > g.y;
+            state.x < currentGoal.x + currentGoal.w &&
+            state.x + (state.width || 22) > currentGoal.x &&
+            state.y < currentGoal.y + currentGoal.h &&
+            state.y + (state.height || 22) > currentGoal.y;
 
           const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
 
@@ -272,7 +290,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       // Clear Canvas
-      ctx.clearRect(0, 0, worldConfig.width, worldConfig.height);
+      ctx.clearRect(0, 0, worldW, worldH);
 
       // Save context for camera shake
       ctx.save();
@@ -286,49 +304,64 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       // Draw Grid Background
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
       ctx.lineWidth = 1;
-      for (let x = 0; x < worldConfig.width; x += 20) {
+      for (let x = 0; x < worldW; x += 20) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, worldConfig.height);
+        ctx.lineTo(x, worldH);
         ctx.stroke();
       }
-      for (let y = 0; y < worldConfig.height; y += 20) {
+      for (let y = 0; y < worldH; y += 20) {
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(worldConfig.width, y);
+        ctx.lineTo(worldW, y);
         ctx.stroke();
       }
 
-      // Draw Ground
+      // Draw Ground (Driven dynamically by world.groundY)
+      const groundY = typeof world.groundY === 'number' ? world.groundY : 240;
       ctx.strokeStyle = '#252B3B';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, worldConfig.groundY + 0.5);
-      ctx.lineTo(worldConfig.width, worldConfig.groundY + 0.5);
+      ctx.moveTo(0, groundY + 0.5);
+      ctx.lineTo(worldW, groundY + 0.5);
       ctx.stroke();
 
       ctx.fillStyle = 'rgba(37, 43, 59, 0.2)';
-      ctx.fillRect(0, worldConfig.groundY, worldConfig.width, worldConfig.height - worldConfig.groundY);
+      ctx.fillRect(0, groundY, worldW, worldH - groundY);
 
-      // Draw Platform (Collision & Capstone lessons)
-      if (['collision', 'capstone'].includes(lessonId)) {
-        const p = worldConfig.platform;
+      // Draw Platform (Collision Box: Driven dynamically by world.platform)
+      const p = world.platform;
+      if (p && typeof p.x === 'number' && typeof p.y === 'number' && typeof p.w === 'number' && typeof p.h === 'number') {
         ctx.fillStyle = '#181C29';
         ctx.strokeStyle = '#4FD1C5';
         ctx.lineWidth = 1.5;
         ctx.fillRect(p.x, p.y, p.w, p.h);
         ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
 
-        // Platform top glow
-        ctx.strokeStyle = 'rgba(79, 209, 197, 0.6)';
+        // Platform top glow line
+        ctx.strokeStyle = 'rgba(79, 209, 197, 0.7)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(p.x + p.w, p.y);
         ctx.stroke();
+
+        // Box dimensions indicator showing exact code-defined values
+        ctx.fillStyle = '#4FD1C5';
+        ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`BOX: ${Math.round(p.w)}×${Math.round(p.h)}`, p.x + p.w / 2, p.y + p.h / 2 + 3);
+
+        // Solid collision box corner markers
+        ctx.fillStyle = '#4FD1C5';
+        ctx.fillRect(p.x, p.y, 2.5, 2.5);
+        ctx.fillRect(p.x + p.w - 2.5, p.y, 2.5, 2.5);
+        ctx.fillRect(p.x, p.y + p.h - 2.5, 2.5, 2.5);
+        ctx.fillRect(p.x + p.w - 2.5, p.y + p.h - 2.5, 2.5, 2.5);
       }
 
-      // Draw Coins / Energy Gems (Capstone lesson)
-      if (lessonId === 'capstone' && state.coins) {
+      // Draw Coins / Energy Gems (Driven dynamically by state.coins)
+      if (state.coins && state.coins.length > 0) {
         state.coins.forEach(coin => {
           if (!coin.collected) {
             ctx.fillStyle = '#4FD1C5';
@@ -340,9 +373,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             ctx.shadowBlur = 0;
           }
         });
+      }
 
-        // Draw Portal Goal (Active Radiant Green when open, Amber when locked)
-        const g = worldConfig.goal;
+      // Draw Portal Goal (Driven dynamically by world.goal)
+      const g = world.goal;
+      if (g && typeof g.x === 'number' && typeof g.y === 'number' && typeof g.w === 'number' && typeof g.h === 'number') {
         const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
         const coinsCollectedCount = state.coins ? state.coins.filter(c => c.collected).length : 0;
         const totalCoins = state.coins ? state.coins.length : 3;
@@ -379,28 +414,31 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.fillStyle = '#F0A94E';
           ctx.font = 'bold 9px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText('LOCKED', g.x + g.w / 2, g.y + g.h / 2 - 2);
-          ctx.fillText(`${coinsCollectedCount}/${totalCoins}`, g.x + g.w / 2, g.y + g.h / 2 + 10);
+          ctx.fillText('PORTAL', g.x + g.w / 2, g.y + g.h / 2 - 2);
+          ctx.fillText(state.coins && state.coins.length > 0 ? `${coinsCollectedCount}/${totalCoins}` : 'EXIT', g.x + g.w / 2, g.y + g.h / 2 + 10);
         }
       }
 
-      // Draw Enemy (Chase AI & Capstone)
-      if (['chase', 'capstone'].includes(lessonId)) {
+      // Draw Enemy (Driven dynamically by state.enemyX, state.enemyY, state.enemyRadius)
+      if (typeof state.enemyX === 'number' && typeof state.enemyY === 'number' && (['chase', 'capstone'].includes(lessonId) || state.enemyX > 0)) {
+        const enemyR = typeof state.enemyRadius === 'number' ? state.enemyRadius : 10;
         ctx.fillStyle = '#F0616B';
         ctx.shadowColor = 'rgba(240, 97, 107, 0.8)';
         ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.arc(state.enemyX, state.enemyY, 10, 0, Math.PI * 2);
+        ctx.arc(state.enemyX, state.enemyY, enemyR, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
       }
 
-      // Draw Player Square (if alive)
+      // Draw Player Square (Driven dynamically by state.x, state.y, state.width, state.height, state.color)
       if (!isGameOverRef.current) {
-        ctx.fillStyle = '#F0A94E';
+        const pw = state.width || 22;
+        const ph = state.height || 22;
+        ctx.fillStyle = state.color || '#F0A94E';
         ctx.shadowColor = 'rgba(240, 169, 78, 0.6)';
         ctx.shadowBlur = 12;
-        ctx.fillRect(state.x, state.y, state.width, state.height);
+        ctx.fillRect(state.x, state.y, pw, ph);
         ctx.shadowBlur = 0;
       }
 
@@ -431,12 +469,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       // Render Game Over Overlay Card on Canvas
       if (isGameOverRef.current) {
         ctx.fillStyle = 'rgba(9, 11, 16, 0.78)';
-        ctx.fillRect(0, 0, worldConfig.width, worldConfig.height);
+        ctx.fillRect(0, 0, worldW, worldH);
 
         const cardW = 280;
         const cardH = 138;
-        const cardX = (worldConfig.width - cardW) / 2;
-        const cardY = (worldConfig.height - cardH) / 2;
+        const cardX = (worldW - cardW) / 2;
+        const cardY = (worldH - cardH) / 2;
 
         // Card background
         ctx.fillStyle = '#121622';
@@ -513,8 +551,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         <div className="canvas-container">
           <canvas
             ref={canvasRef}
-            width={worldConfig.width}
-            height={worldConfig.height}
+            width={worldRef.current.width || 480}
+            height={worldRef.current.height || 280}
             tabIndex={0}
             onClick={() => {
               if (isGameOverRef.current) respawn();

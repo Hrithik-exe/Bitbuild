@@ -33,6 +33,8 @@ export interface PlayerState {
   onGround: boolean;
   enemyX: number;
   enemyY: number;
+  enemyRadius?: number;
+  color?: string;
   coins: { x: number; y: number; collected: boolean }[];
   score: number;
 }
@@ -41,8 +43,8 @@ export interface WorldConfig {
   width: number;
   height: number;
   groundY: number;
-  platform: { x: number; y: number; w: number; h: number };
-  goal: { x: number; y: number; w: number; h: number };
+  platform?: { x: number; y: number; w: number; h: number } | null;
+  goal?: { x: number; y: number; w: number; h: number } | null;
 }
 
 export interface ReadoutData {

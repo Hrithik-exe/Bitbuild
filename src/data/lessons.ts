@@ -106,7 +106,10 @@ state.y = std::clamp(state.y, 0.0f, world.height - state.height);`
       { speaker: 'mentorB', text: 'Press UP arrow to jump! Watch out for infinite mid-air jumps if onGround is ignored.', trigger: 'onEnter' }
     ],
     code: {
-      javascript: `const gravity = 800;    // downward acceleration (px/s^2)
+      javascript: `// Ground floor height (adjust this to change the floor level!)
+world.groundY = 240;
+
+const gravity = 800;    // downward acceleration (px/s^2)
 const jumpPower = 380;  // initial upward impulse
 const moveSpeed = 160;
 
@@ -138,6 +141,8 @@ if (state.y >= groundY) {
 
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
       python: `# Python Gravity & Jump Implementation
+world['groundY'] = 240
+
 gravity = 800.0
 jump_power = 380.0
 move_speed = 160.0
@@ -168,6 +173,8 @@ else:
 
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))`,
       cpp: `// C++ Physics Sandbox
+world.groundY = 240.0f;
+
 float gravity = 800.0f;
 float jumpPower = 380.0f;
 float moveSpeed = 160.0f;
@@ -202,16 +209,21 @@ if (state.y >= groundY) {
     note: {
       title: 'AABB collision detection',
       body: [
-        'The floating block is an axis-aligned bounding box (AABB): world.platform = {x, y, w, h}. Two boxes overlap when they overlap on both the x-axis AND the y-axis at the same time — that\'s the four-condition check in the code.',
-        'This code checks the next position before committing to it, so the player stops at the edge instead of clipping through. Try deleting the check and watch the player pass straight through the block.'
+        'The floating block is an axis-aligned bounding box (AABB): world.platform = {x, y, w, h}. You define and shape this collision box right in your code! Adjust the numbers in world.platform to reposition or resize the box, and watch it immediately update in the emulator.',
+        'This code checks horizontal (x) and vertical (y) movement independently before committing, fully stopping the player flush against the platform edges instead of casually clipping through.'
       ]
     },
     mentorLines: [
-      { speaker: 'mentorB', text: 'AABB stands for Axis-Aligned Bounding Box. No rotated boxes allowed today!', trigger: 'onEnter' },
-      { speaker: 'mentorA', text: 'Jump onto the teal platform to test landing mechanics.', trigger: 'onEnter' }
+      { speaker: 'mentorA', text: 'You control the game world! Look at world.platform in your code — change x, y, w, or h to reshape the platform!', trigger: 'onEnter' },
+      { speaker: 'mentorB', text: 'AABB collision tests horizontal and vertical axes independently to stop movement dead against the box.', trigger: 'onEnter' }
     ],
     code: {
-      javascript: `const speed = 160;
+      javascript: `// 1. Define the platform collision box: [x, y, width, height]
+// You have full control! Adjust these numbers to reposition or resize the platform box.
+world.platform = { x: 250, y: 145, w: 120, h: 20 };
+world.groundY = 240;
+
+const speed = 160;
 const gravity = 800;
 const jumpPower = 360;
 
@@ -227,7 +239,7 @@ if (keys.up && state.onGround) {
 
 const p = world.platform;
 
-// 1. Resolve X movement (fully stops horizontal movement against the box)
+// 2. Resolve X movement (fully stops horizontal movement against the box)
 let nextX = state.x + state.vx * dt;
 const hitsX =
   nextX < p.x + p.w && nextX + state.width > p.x &&
@@ -241,7 +253,7 @@ if (!hitsX) {
   state.vx = 0;
 }
 
-// 2. Resolve Y movement (fully stops vertical movement against the box)
+// 3. Resolve Y movement (fully stops vertical movement against the box)
 let nextY = state.y + state.vy * dt;
 const hitsY =
   state.x < p.x + p.w && state.x + state.width > p.x &&
@@ -260,6 +272,7 @@ if (!hitsY) {
   }
 }
 
+// 4. Ground landing
 const groundY = world.groundY - state.height;
 if (state.y >= groundY) {
   state.y = groundY;
@@ -269,6 +282,11 @@ if (state.y >= groundY) {
 
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
       python: `# Python Solid AABB Platform Collision
+# 1. Define the platform collision box: [x, y, width, height]
+# You have full control! Adjust these values to reposition or resize the box.
+world['platform'] = {'x': 250, 'y': 145, 'w': 120, 'h': 20}
+world['groundY'] = 240
+
 speed = 160.0
 gravity = 800.0
 jump_power = 360.0
@@ -287,7 +305,7 @@ if keys.up and state['onGround']:
 
 p = world['platform']
 
-# 1. Resolve X movement against collision box
+# 2. Resolve X movement against collision box
 next_x = state['x'] + state['vx'] * dt
 hits_x = (next_x < p['x'] + p['w'] and next_x + state['width'] > p['x'] and
           state['y'] < p['y'] + p['h'] and state['y'] + state['height'] > p['y'])
@@ -301,7 +319,7 @@ else:
         state['x'] = p['x'] + p['w']
     state['vx'] = 0.0
 
-# 2. Resolve Y movement against collision box
+# 3. Resolve Y movement against collision box
 next_y = state['y'] + state['vy'] * dt
 hits_y = (state['x'] < p['x'] + p['w'] and state['x'] + state['width'] > p['x'] and
           next_y < p['y'] + p['h'] and next_y + state['height'] > p['y'])
@@ -317,12 +335,18 @@ else:
         state['y'] = p['y'] + p['h']
         state['vy'] = 0.0
 
+# 4. Ground landing
 ground_y = world['groundY'] - state['height']
 if state['y'] >= ground_y:
     state['y'] = ground_y
     state['vy'] = 0.0
     state['onGround'] = True`,
       cpp: `// C++ Solid AABB Collision Resolution
+// 1. Define the platform collision box: [x, y, width, height]
+// You have full control! Adjust these values to reposition or resize the box.
+world.platform = { x: 250.0f, y: 145.0f, w: 120.0f, h: 20.0f };
+world.groundY = 240.0f;
+
 float speed = 160.0f;
 float gravity = 800.0f;
 float jumpPower = 360.0f;
@@ -336,7 +360,7 @@ if (keys.up && state.onGround) state.vy = -jumpPower;
 
 auto p = world.platform;
 
-// 1. Resolve X movement
+// 2. Resolve X movement
 float nextX = state.x + state.vx * dt;
 bool hitsX = nextX < p.x + p.w && nextX + state.width > p.x &&
              state.y < p.y + p.h && state.y + state.height > p.y;
@@ -349,7 +373,7 @@ if (!hitsX) {
   state.vx = 0.0f;
 }
 
-// 2. Resolve Y movement
+// 3. Resolve Y movement
 float nextY = state.y + state.vy * dt;
 bool hitsY = state.x < p.x + p.w && state.x + state.width > p.x &&
              nextY < p.y + p.h && nextY + state.height > p.y;
@@ -383,10 +407,20 @@ if (!hitsY) {
     },
     mentorLines: [
       { speaker: 'mentorA', text: 'Red orb detected! It uses vector normalization to track your coordinates.', trigger: 'onEnter' },
-      { speaker: 'mentorB', text: 'Tip: Add a proximity check if (dist < 180) to make stealth gameplay possible!', trigger: 'onEnter' }
+      { speaker: 'mentorB', text: 'Tip: You can change enemySpeed or initial position in your code to tune the challenge!', trigger: 'onEnter' }
     ],
     code: {
-      javascript: `const speed = 170;
+      javascript: `// 1. Environment & Enemy AI Configuration
+// You have full control! Adjust enemySpeed or coordinates.
+world.width = 480;
+world.height = 280;
+
+if (state.enemyX === undefined) {
+  state.enemyX = 400;
+  state.enemyY = 70;
+}
+
+const speed = 170;
 const enemySpeed = 95;
 
 if (keys.left)  state.x -= speed * dt;
@@ -397,7 +431,7 @@ if (keys.down)  state.y += speed * dt;
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));
 state.y = Math.max(0, Math.min(world.height - state.height, state.y));
 
-// Steer the red enemy orb toward the player position
+// 2. Steer the red enemy orb toward the player position
 const dx = state.x - state.enemyX;
 const dy = state.y - state.enemyY;
 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -405,6 +439,14 @@ const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 state.enemyX += (dx / dist) * enemySpeed * dt;
 state.enemyY += (dy / dist) * enemySpeed * dt;`,
       python: `# Python Chase AI Vector Steering
+# 1. Environment & Enemy Configuration
+world['width'] = 480
+world['height'] = 280
+
+if state.get('enemyX') is None:
+    state['enemyX'] = 400.0
+    state['enemyY'] = 70.0
+
 speed = 170.0
 enemy_speed = 95.0
 
@@ -417,6 +459,10 @@ if keys.up:
 if keys.down:
     state['y'] += speed * dt
 
+state['x'] = max(0, min(world['width'] - state['width'], state['x']))
+state['y'] = max(0, min(world['height'] - state['height'], state['y']))
+
+# 2. Vector steering toward player
 dx = state['x'] - state['enemyX']
 dy = state['y'] - state['enemyY']
 dist = (dx * dx + dy * dy) ** 0.5 or 1.0
@@ -424,6 +470,15 @@ dist = (dx * dx + dy * dy) ** 0.5 or 1.0
 state['enemyX'] += (dx / dist) * enemy_speed * dt
 state['enemyY'] += (dy / dist) * enemy_speed * dt`,
       cpp: `// C++ Vector Chase AI
+// 1. Environment & Enemy Configuration
+world.width = 480.0f;
+world.height = 280.0f;
+
+if (state.enemyX <= 0.0f) {
+  state.enemyX = 400.0f;
+  state.enemyY = 70.0f;
+}
+
 float speed = 170.0f;
 float enemySpeed = 95.0f;
 
@@ -432,6 +487,10 @@ if (keys.right) state.x += speed * dt;
 if (keys.up)    state.y -= speed * dt;
 if (keys.down)  state.y += speed * dt;
 
+state.x = std::clamp(state.x, 0.0f, world.width - state.width);
+state.y = std::clamp(state.y, 0.0f, world.height - state.height);
+
+// 2. Vector steering toward player
 float dx = state.x - state.enemyX;
 float dy = state.y - state.enemyY;
 float dist = std::sqrt(dx * dx + dy * dy);
@@ -448,24 +507,50 @@ if (dist > 0.001f) {
     chapter: 'ch4',
     xp: 250,
     note: {
-      title: 'Capstone Boss Challenge',
+      title: 'Capstone Boss Challenge: Building a Full Game',
       body: [
-        'Combine all previous mechanics! Jump across the floating platform, dodge the chasing red AI, collect the 3 glowing energy gems, and reach the glowing green portal to win!',
-        'This capstone requires integrating input, gravity jumping, platform collision, and enemy steering into one cohesive script.'
+        'You are building a complete arcade game from scratch! In your code, you now define the entire level layout: the floating platform collision box (world.platform), the floor line (world.groundY), the green portal exit (world.goal), the energy gems (state.coins), and the chasing AI enemy (state.enemyX, enemySpeed).',
+        'Try adjusting any number in the code — make the platform wider, reposition the energy gems, or tune the enemy speed to see how game designers craft gameplay mechanics!'
       ]
     },
     mentorLines: [
-      { speaker: 'mentorA', text: 'THIS IS IT! The final Capstone level. Collect all gems and touch the portal!', trigger: 'onEnter' },
-      { speaker: 'mentorB', text: 'You need to combine jumping, platform landing, and AI evasion. Good luck, Dev!', trigger: 'onEnter' }
+      { speaker: 'mentorA', text: 'THIS IS IT! You have full code control over the entire game world: platform, ground, gems, AI, and portal!', trigger: 'onEnter' },
+      { speaker: 'mentorB', text: 'Change the numbers in Section 1 of your code to customize your level layout and test your design in real-time!', trigger: 'onEnter' }
     ],
     code: {
-      javascript: `// Capstone: Escape the Arena!
+      javascript: `// ========================================================
+// 1. GAME WORLD & LEVEL SETUP (Adjust anything to design!)
+// ========================================================
+world.groundY = 240;                                // Floor line height
+world.platform = { x: 240, y: 145, w: 120, h: 20 }; // Floating platform collision box [x, y, w, h]
+world.goal = { x: 416, y: 175, w: 38, h: 65 };       // Green portal exit [x, y, w, h]
+
+// Initialize the 3 energy gems across the arena
+if (!state.coins || state.coins.length === 0) {
+  state.coins = [
+    { x: 300, y: 115, collected: false },
+    { x: 160, y: 185, collected: false },
+    { x: 360, y: 215, collected: false }
+  ];
+}
+
+// Initialize enemy pursuer spawn position
+if (state.enemyX === undefined) {
+  state.enemyX = 420;
+  state.enemyY = 60;
+}
+
+// ========================================================
+// 2. PLAYER & ENEMY SPEED/PHYSICS CONSTANTS
+// ========================================================
 const speed = 170;
 const gravity = 820;
 const jumpPower = 370;
 const enemySpeed = 80;
 
-// Movement
+// ========================================================
+// 3. PLAYER MOVEMENT & JUMPING
+// ========================================================
 if (keys.left) state.vx = -speed;
 else if (keys.right) state.vx = speed;
 else state.vx = 0;
@@ -476,7 +561,9 @@ if (keys.up && state.onGround) {
   state.onGround = false;
 }
 
-// Platform collision (fully stops user movement)
+// ========================================================
+// 4. PLATFORM COLLISION (Solid Stopping)
+// ========================================================
 const p = world.platform;
 
 let nextX = state.x + state.vx * dt;
@@ -510,7 +597,9 @@ if (!hitsY) {
   }
 }
 
-// Ground landing
+// ========================================================
+// 5. GROUND LANDING & BOUNDARIES
+// ========================================================
 const groundY = world.groundY - state.height;
 if (state.y >= groundY) {
   state.y = groundY;
@@ -520,14 +609,18 @@ if (state.y >= groundY) {
 
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));
 
-// Enemy Chase AI
+// ========================================================
+// 6. ENEMY VECTOR CHASE AI
+// ========================================================
 const dx = state.x - state.enemyX;
 const dy = state.y - state.enemyY;
 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 state.enemyX += (dx / dist) * enemySpeed * dt;
 state.enemyY += (dy / dist) * enemySpeed * dt;
 
-// Check gem collection
+// ========================================================
+// 7. GEM PICKUP RADIUS CHECK
+// ========================================================
 if (state.coins) {
   state.coins.forEach(coin => {
     if (!coin.collected) {
@@ -541,12 +634,35 @@ if (state.coins) {
   });
 }`,
       python: `# Python Boss Capstone Script
+# ========================================================
+# 1. GAME WORLD & LEVEL SETUP (Adjust anything to design!)
+# ========================================================
+world['groundY'] = 240
+world['platform'] = {'x': 240, 'y': 145, 'w': 120, 'h': 20}
+world['goal'] = {'x': 416, 'y': 175, 'w': 38, 'h': 65}
+
+if not state.get('coins'):
+    state['coins'] = [
+        {'x': 300, 'y': 115, 'collected': False},
+        {'x': 160, 'y': 185, 'collected': False},
+        {'x': 360, 'y': 215, 'collected': False}
+    ]
+
+if state.get('enemyX') is None:
+    state['enemyX'] = 420.0
+    state['enemyY'] = 60.0
+
+# ========================================================
+# 2. PLAYER & ENEMY SPEED/PHYSICS CONSTANTS
+# ========================================================
 speed = 170.0
 gravity = 820.0
 jump_power = 370.0
 enemy_speed = 80.0
 
-# Movement
+# ========================================================
+# 3. PLAYER MOVEMENT & JUMPING
+# ========================================================
 if keys.left:
     state['vx'] = -speed
 elif keys.right:
@@ -559,7 +675,9 @@ if keys.up and state['onGround']:
     state['vy'] = -jump_power
     state['onGround'] = False
 
-# Platform collision (fully stops user movement)
+# ========================================================
+# 4. PLATFORM COLLISION (Solid Stopping)
+# ========================================================
 p = world['platform']
 
 next_x = state['x'] + state['vx'] * dt
@@ -590,7 +708,9 @@ else:
         state['y'] = p['y'] + p['h']
         state['vy'] = 0.0
 
-# Ground landing
+# ========================================================
+# 5. GROUND LANDING & BOUNDARIES
+# ========================================================
 ground_y = world['groundY'] - state['height']
 if state['y'] >= ground_y:
     state['y'] = ground_y
@@ -599,14 +719,18 @@ if state['y'] >= ground_y:
 
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))
 
-# Enemy Chase AI
+# ========================================================
+# 6. ENEMY CHASE AI
+# ========================================================
 dx = state['x'] - state['enemyX']
 dy = state['y'] - state['enemyY']
 dist = (dx * dx + dy * dy) ** 0.5 or 1.0
 state['enemyX'] += (dx / dist) * enemy_speed * dt
 state['enemyY'] += (dy / dist) * enemy_speed * dt
 
-# Collect gems
+# ========================================================
+# 7. GEM PICKUP RADIUS CHECK
+# ========================================================
 if state.get('coins'):
     for coin in state['coins']:
         if not coin.get('collected'):
@@ -616,11 +740,29 @@ if state.get('coins'):
                 coin['collected'] = True
                 state['score'] = (state.get('score') or 0) + 100`,
       cpp: `// C++ Boss Capstone
+// ========================================================
+// 1. GAME WORLD & LEVEL SETUP (Adjust anything to design!)
+// ========================================================
+world.groundY = 240.0f;
+world.platform = { x: 240.0f, y: 145.0f, w: 120.0f, h: 20.0f };
+world.goal = { x: 416.0f, y: 175.0f, w: 38.0f, h: 65.0f };
+
+if (state.enemyX <= 0.0f) {
+  state.enemyX = 420.0f;
+  state.enemyY = 60.0f;
+}
+
+// ========================================================
+// 2. PLAYER & ENEMY SPEED/PHYSICS CONSTANTS
+// ========================================================
 float speed = 170.0f;
 float gravity = 820.0f;
 float jumpPower = 370.0f;
 float enemySpeed = 80.0f;
 
+// ========================================================
+// 3. PLAYER MOVEMENT & JUMPING
+// ========================================================
 if (keys.left) state.vx = -speed;
 else if (keys.right) state.vx = speed;
 else state.vx = 0.0f;
@@ -631,7 +773,9 @@ if (keys.up && state.onGround) {
   state.onGround = false;
 }
 
-// Platform collision (fully stops user movement)
+// ========================================================
+// 4. PLATFORM COLLISION (Solid Stopping)
+// ========================================================
 auto p = world.platform;
 
 float nextX = state.x + state.vx * dt;
@@ -663,6 +807,9 @@ if (!hitsY) {
   }
 }
 
+// ========================================================
+// 5. GROUND LANDING & BOUNDARIES
+// ========================================================
 float groundY = world.groundY - state.height;
 if (state.y >= groundY) {
   state.y = groundY;
@@ -672,6 +819,9 @@ if (state.y >= groundY) {
 
 state.x = Math.max(0.0f, Math.min(world.width - state.width, state.x));
 
+// ========================================================
+// 6. ENEMY CHASE AI
+// ========================================================
 float dx = state.x - state.enemyX;
 float dy = state.y - state.enemyY;
 float dist = std::sqrt(dx * dx + dy * dy);
@@ -680,6 +830,9 @@ if (dist > 0.001f) {
   state.enemyY += (dy / dist) * enemySpeed * dt;
 }
 
+// ========================================================
+// 7. GEM PICKUP RADIUS CHECK
+// ========================================================
 if (state.coins) {
   state.coins.forEach(coin => {
     if (!coin.collected) {
