@@ -225,25 +225,37 @@ if (keys.up && state.onGround) {
   state.onGround = false;
 }
 
-let nextX = state.x + state.vx * dt;
-let nextY = state.y + state.vy * dt;
-
-// AABB overlap test against the floating platform
 const p = world.platform;
-const hitsPlatform =
+
+// 1. Resolve X movement (fully stops horizontal movement against the box)
+let nextX = state.x + state.vx * dt;
+const hitsX =
   nextX < p.x + p.w && nextX + state.width > p.x &&
+  state.y < p.y + p.h && state.y + state.height > p.y;
+
+if (!hitsX) {
+  state.x = nextX;
+} else {
+  if (state.vx > 0) state.x = p.x - state.width;
+  else if (state.vx < 0) state.x = p.x + p.w;
+  state.vx = 0;
+}
+
+// 2. Resolve Y movement (fully stops vertical movement against the box)
+let nextY = state.y + state.vy * dt;
+const hitsY =
+  state.x < p.x + p.w && state.x + state.width > p.x &&
   nextY < p.y + p.h && nextY + state.height > p.y;
 
-if (!hitsPlatform) {
-  state.x = nextX;
+if (!hitsY) {
   state.y = nextY;
 } else {
-  // Land on top of platform if falling downward
-  if (state.vy > 0 && state.y + state.height <= p.y + 10) {
+  if (state.vy > 0) {
     state.y = p.y - state.height;
     state.vy = 0;
     state.onGround = true;
-  } else {
+  } else if (state.vy < 0) {
+    state.y = p.y + p.h;
     state.vy = 0;
   }
 }
@@ -256,7 +268,7 @@ if (state.y >= groundY) {
 }
 
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
-      python: `# Python AABB Platform Collision
+      python: `# Python Solid AABB Platform Collision
 speed = 160.0
 gravity = 800.0
 jump_power = 360.0
@@ -273,25 +285,44 @@ if keys.up and state['onGround']:
     state['vy'] = -jump_power
     state['onGround'] = False
 
-next_x = state['x'] + state['vx'] * dt
-next_y = state['y'] + state['vy'] * dt
-
 p = world['platform']
-hits = (next_x < p['x'] + p['w'] and next_x + state['width'] > p['x'] and
-        next_y < p['y'] + p['h'] and next_y + state['height'] > p['y'])
 
-if not hits:
+# 1. Resolve X movement against collision box
+next_x = state['x'] + state['vx'] * dt
+hits_x = (next_x < p['x'] + p['w'] and next_x + state['width'] > p['x'] and
+          state['y'] < p['y'] + p['h'] and state['y'] + state['height'] > p['y'])
+
+if not hits_x:
     state['x'] = next_x
+else:
+    if state['vx'] > 0:
+        state['x'] = p['x'] - state['width']
+    elif state['vx'] < 0:
+        state['x'] = p['x'] + p['w']
+    state['vx'] = 0.0
+
+# 2. Resolve Y movement against collision box
+next_y = state['y'] + state['vy'] * dt
+hits_y = (state['x'] < p['x'] + p['w'] and state['x'] + state['width'] > p['x'] and
+          next_y < p['y'] + p['h'] and next_y + state['height'] > p['y'])
+
+if not hits_y:
     state['y'] = next_y
 else:
-    state['vy'] = 0.0
+    if state['vy'] > 0:
+        state['y'] = p['y'] - state['height']
+        state['vy'] = 0.0
+        state['onGround'] = True
+    elif state['vy'] < 0:
+        state['y'] = p['y'] + p['h']
+        state['vy'] = 0.0
 
 ground_y = world['groundY'] - state['height']
 if state['y'] >= ground_y:
     state['y'] = ground_y
     state['vy'] = 0.0
     state['onGround'] = True`,
-      cpp: `// C++ AABB Collision Check
+      cpp: `// C++ Solid AABB Collision Resolution
 float speed = 160.0f;
 float gravity = 800.0f;
 float jumpPower = 360.0f;
@@ -303,16 +334,37 @@ else state.vx = 0.0f;
 state.vy += gravity * dt;
 if (keys.up && state.onGround) state.vy = -jumpPower;
 
-float nextX = state.x + state.vx * dt;
-float nextY = state.y + state.vy * dt;
-
 auto p = world.platform;
-bool hits = nextX < p.x + p.w && nextX + state.width > p.x &&
-            nextY < p.y + p.h && nextY + state.height > p.y;
 
-if (!hits) {
+// 1. Resolve X movement
+float nextX = state.x + state.vx * dt;
+bool hitsX = nextX < p.x + p.w && nextX + state.width > p.x &&
+             state.y < p.y + p.h && state.y + state.height > p.y;
+
+if (!hitsX) {
   state.x = nextX;
+} else {
+  if (state.vx > 0.0f) state.x = p.x - state.width;
+  else if (state.vx < 0.0f) state.x = p.x + p.w;
+  state.vx = 0.0f;
+}
+
+// 2. Resolve Y movement
+float nextY = state.y + state.vy * dt;
+bool hitsY = state.x < p.x + p.w && state.x + state.width > p.x &&
+             nextY < p.y + p.h && nextY + state.height > p.y;
+
+if (!hitsY) {
   state.y = nextY;
+} else {
+  if (state.vy > 0.0f) {
+    state.y = p.y - state.height;
+    state.vy = 0.0f;
+    state.onGround = true;
+  } else if (state.vy < 0.0f) {
+    state.y = p.y + p.h;
+    state.vy = 0.0f;
+  }
 }`
     }
   },
@@ -424,24 +476,36 @@ if (keys.up && state.onGround) {
   state.onGround = false;
 }
 
-let nextX = state.x + state.vx * dt;
-let nextY = state.y + state.vy * dt;
-
-// Platform collision
+// Platform collision (fully stops user movement)
 const p = world.platform;
-const hitsPlatform =
+
+let nextX = state.x + state.vx * dt;
+const hitsX =
   nextX < p.x + p.w && nextX + state.width > p.x &&
+  state.y < p.y + p.h && state.y + state.height > p.y;
+
+if (!hitsX) {
+  state.x = nextX;
+} else {
+  if (state.vx > 0) state.x = p.x - state.width;
+  else if (state.vx < 0) state.x = p.x + p.w;
+  state.vx = 0;
+}
+
+let nextY = state.y + state.vy * dt;
+const hitsY =
+  state.x < p.x + p.w && state.x + state.width > p.x &&
   nextY < p.y + p.h && nextY + state.height > p.y;
 
-if (!hitsPlatform) {
-  state.x = nextX;
+if (!hitsY) {
   state.y = nextY;
 } else {
-  if (state.vy > 0 && state.y + state.height <= p.y + 12) {
+  if (state.vy > 0) {
     state.y = p.y - state.height;
     state.vy = 0;
     state.onGround = true;
-  } else {
+  } else if (state.vy < 0) {
+    state.y = p.y + p.h;
     state.vy = 0;
   }
 }
@@ -495,23 +559,35 @@ if keys.up and state['onGround']:
     state['vy'] = -jump_power
     state['onGround'] = False
 
-next_x = state['x'] + state['vx'] * dt
-next_y = state['y'] + state['vy'] * dt
-
-# Platform collision
+# Platform collision (fully stops user movement)
 p = world['platform']
-hits = (next_x < p['x'] + p['w'] and next_x + state['width'] > p['x'] and
-        next_y < p['y'] + p['h'] and next_y + state['height'] > p['y'])
 
-if not hits:
+next_x = state['x'] + state['vx'] * dt
+hits_x = (next_x < p['x'] + p['w'] and next_x + state['width'] > p['x'] and
+          state['y'] < p['y'] + p['h'] and state['y'] + state['height'] > p['y'])
+
+if not hits_x:
     state['x'] = next_x
+else:
+    if state['vx'] > 0:
+        state['x'] = p['x'] - state['width']
+    elif state['vx'] < 0:
+        state['x'] = p['x'] + p['w']
+    state['vx'] = 0.0
+
+next_y = state['y'] + state['vy'] * dt
+hits_y = (state['x'] < p['x'] + p['w'] and state['x'] + state['width'] > p['x'] and
+          next_y < p['y'] + p['h'] and next_y + state['height'] > p['y'])
+
+if not hits_y:
     state['y'] = next_y
 else:
-    if state['vy'] > 0 and state['y'] + state['height'] <= p['y'] + 12:
+    if state['vy'] > 0:
         state['y'] = p['y'] - state['height']
         state['vy'] = 0.0
         state['onGround'] = True
-    else:
+    elif state['vy'] < 0:
+        state['y'] = p['y'] + p['h']
         state['vy'] = 0.0
 
 # Ground landing
@@ -555,22 +631,34 @@ if (keys.up && state.onGround) {
   state.onGround = false;
 }
 
-float nextX = state.x + state.vx * dt;
-float nextY = state.y + state.vy * dt;
-
+// Platform collision (fully stops user movement)
 auto p = world.platform;
-bool hits = nextX < p.x + p.w && nextX + state.width > p.x &&
-            nextY < p.y + p.h && nextY + state.height > p.y;
 
-if (!hits) {
+float nextX = state.x + state.vx * dt;
+bool hitsX = nextX < p.x + p.w && nextX + state.width > p.x &&
+             state.y < p.y + p.h && state.y + state.height > p.y;
+
+if (!hitsX) {
   state.x = nextX;
+} else {
+  if (state.vx > 0.0f) state.x = p.x - state.width;
+  else if (state.vx < 0.0f) state.x = p.x + p.w;
+  state.vx = 0.0f;
+}
+
+float nextY = state.y + state.vy * dt;
+bool hitsY = state.x < p.x + p.w && state.x + state.width > p.x &&
+             nextY < p.y + p.h && nextY + state.height > p.y;
+
+if (!hitsY) {
   state.y = nextY;
 } else {
-  if (state.vy > 0 && state.y + state.height <= p.y + 12) {
+  if (state.vy > 0.0f) {
     state.y = p.y - state.height;
     state.vy = 0.0f;
     state.onGround = true;
-  } else {
+  } else if (state.vy < 0.0f) {
+    state.y = p.y + p.h;
     state.vy = 0.0f;
   }
 }

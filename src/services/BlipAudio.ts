@@ -127,6 +127,41 @@ class BlipAudioEngine {
       // Ignore
     }
   }
+
+  public playDeathTone() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(300, now);
+      osc1.frequency.exponentialRampToValueAtTime(40, now + 0.35);
+
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(150, now);
+      osc2.frequency.exponentialRampToValueAtTime(30, now + 0.35);
+
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.35);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.35);
+      osc2.stop(now + 0.35);
+    } catch {
+      // Ignore
+    }
+  }
 }
 
 export const blipAudio = new BlipAudioEngine();

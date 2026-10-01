@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import type { ReadoutData, PlayerState, WorldConfig } from '../../types/lesson';
+import { blipAudio } from '../../services/BlipAudio';
 
 interface GameCanvasProps {
   updateFn: ((state: Record<string, unknown>, keys: Record<string, boolean>, dt: number, world: Record<string, unknown>) => void) | null;
@@ -8,6 +9,18 @@ interface GameCanvasProps {
   isError: boolean;
   lessonId: string;
   onSuccess?: () => void;
+}
+
+interface DebrisParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  alpha: number;
+  life: number;
+  maxLife: number;
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
@@ -19,6 +32,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [readout, setReadout] = useState<ReadoutData>({ x: 0, y: 0, vx: 0, vy: 0, fps: 60 });
+  const [isGameOver, setIsGameOver] = useState(false);
 
   // Simulation State
   const stateRef = useRef<PlayerState>({
@@ -33,9 +47,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     enemyY: 70,
     score: 0,
     coins: [
-      { x: 320, y: 110, collected: false },
-      { x: 200, y: 190, collected: false },
-      { x: 410, y: 200, collected: false }
+      { x: 330, y: 110, collected: false },
+      { x: 180, y: 180, collected: false },
+      { x: 360, y: 215, collected: false }
     ]
   });
 
@@ -46,6 +60,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     down: false
   });
 
+  const isGameOverRef = useRef(false);
+  const deathParticlesRef = useRef<DebrisParticle[]>([]);
+  const shakeTimeRef = useRef(0);
+  const lessonIdRef = useRef(lessonId);
+  lessonIdRef.current = lessonId;
+
   const worldConfig: WorldConfig = {
     width: 480,
     height: 280,
@@ -54,26 +74,71 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     goal: { x: 416, y: 180, w: 38, h: 60 }
   };
 
-  // Reset state when lesson changes
-  useEffect(() => {
-    stateRef.current = {
-      x: 40,
-      y: 40,
-      vx: 0,
-      vy: 0,
-      width: 22,
-      height: 22,
-      onGround: false,
-      enemyX: 400,
-      enemyY: 70,
-      score: 0,
-      coins: [
+  // Respawn / Reset Player Function
+  const respawn = useCallback(() => {
+    isGameOverRef.current = false;
+    setIsGameOver(false);
+    deathParticlesRef.current = [];
+    shakeTimeRef.current = 0;
+
+    stateRef.current.x = 40;
+    stateRef.current.y = 40;
+    stateRef.current.vx = 0;
+    stateRef.current.vy = 0;
+    stateRef.current.onGround = false;
+    stateRef.current.enemyX = 400;
+    stateRef.current.enemyY = 70;
+
+    if (lessonIdRef.current === 'capstone') {
+      stateRef.current.coins = [
         { x: 330, y: 110, collected: false },
         { x: 180, y: 180, collected: false },
         { x: 360, y: 215, collected: false }
-      ]
-    };
-  }, [lessonId]);
+      ];
+      stateRef.current.score = 0;
+    }
+
+    keysRef.current.left = false;
+    keysRef.current.right = false;
+    keysRef.current.up = false;
+    keysRef.current.down = false;
+  }, []);
+
+  // Trigger Death Sequence
+  const triggerDeath = useCallback(() => {
+    if (isGameOverRef.current) return;
+    isGameOverRef.current = true;
+    setIsGameOver(true);
+    shakeTimeRef.current = 0.45;
+    blipAudio.playDeathTone();
+
+    const px = stateRef.current.x + stateRef.current.width / 2;
+    const py = stateRef.current.y + stateRef.current.height / 2;
+    const particles: DebrisParticle[] = [];
+    const colors = ['#F0A94E', '#F0616B', '#FFD166', '#FF4757', '#FFFFFF', '#FFA07A'];
+
+    for (let i = 0; i < 36; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 240;
+      particles.push({
+        x: px,
+        y: py,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 50,
+        size: 2.5 + Math.random() * 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 1,
+        life: 0,
+        maxLife: 0.5 + Math.random() * 0.7
+      });
+    }
+    deathParticlesRef.current = particles;
+  }, []);
+
+  // Reset state when lesson changes
+  useEffect(() => {
+    respawn();
+  }, [lessonId, respawn]);
 
   // Keyboard Event Listeners
   useEffect(() => {
@@ -93,6 +158,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       // If user is editing code in CodeMirror, don't hijack WASD letters
       if (isTypingInEditor()) {
         return;
+      }
+
+      // If game is over, Space, Enter, or R respawns
+      if (isGameOverRef.current) {
+        if (key === ' ' || key === 'Spacebar' || key === 'Enter' || lower === 'r') {
+          e.preventDefault();
+          respawn();
+          return;
+        }
       }
 
       if (['arrowleft', 'arrowright', 'arrowup', 'arrowdown', ' ', 'spacebar'].includes(lower)) {
@@ -121,7 +195,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [respawn]);
 
   // Main Render Loop
   useEffect(() => {
@@ -146,40 +220,68 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Execute code update function
-      if (updateFn) {
-        try {
-          updateFn(
-            state as unknown as Record<string, unknown>,
-            keys,
-            dt,
-            worldConfig as unknown as Record<string, unknown>
-          );
-        } catch {
-          // Runtime error handled by parent status
+      // Update simulation if player is alive
+      if (!isGameOverRef.current) {
+        // Execute code update function
+        if (updateFn) {
+          try {
+            updateFn(
+              state as unknown as Record<string, unknown>,
+              keys,
+              dt,
+              worldConfig as unknown as Record<string, unknown>
+            );
+          } catch {
+            // Runtime error handled by parent status
+          }
+        }
+
+        // Check Enemy Collision (Death Animation Trigger)
+        const hasEnemy = ['chase', 'capstone'].includes(lessonId);
+        if (hasEnemy && !isWon) {
+          const px = state.x + state.width / 2;
+          const py = state.y + state.height / 2;
+          const distToEnemy = Math.hypot(px - state.enemyX, py - state.enemyY);
+          if (distToEnemy < 18) {
+            triggerDeath();
+          }
+        }
+
+        // Capstone Win Condition Check (Accurate 2D AABB Hitbox)
+        if (lessonId === 'capstone' && !isWon) {
+          const g = worldConfig.goal;
+          const playerHitsGoal =
+            state.x < g.x + g.w &&
+            state.x + state.width > g.x &&
+            state.y < g.y + g.h &&
+            state.y + state.height > g.y;
+
+          const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
+
+          if (playerHitsGoal && allCoinsCollected) {
+            isWon = true;
+            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            if (onSuccess) onSuccess();
+          }
         }
       }
 
-      // Capstone Win Condition Check (Accurate 2D AABB Hitbox)
-      if (lessonId === 'capstone' && !isWon) {
-        const g = worldConfig.goal;
-        const playerHitsGoal =
-          state.x < g.x + g.w &&
-          state.x + state.width > g.x &&
-          state.y < g.y + g.h &&
-          state.y + state.height > g.y;
-
-        const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
-
-        if (playerHitsGoal && allCoinsCollected) {
-          isWon = true;
-          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-          if (onSuccess) onSuccess();
-        }
+      // Update Screen Shake Timer
+      if (shakeTimeRef.current > 0) {
+        shakeTimeRef.current = Math.max(0, shakeTimeRef.current - dt);
       }
 
       // Clear Canvas
       ctx.clearRect(0, 0, worldConfig.width, worldConfig.height);
+
+      // Save context for camera shake
+      ctx.save();
+      if (shakeTimeRef.current > 0) {
+        const intensity = (shakeTimeRef.current / 0.45) * 10;
+        const offsetX = (Math.random() - 0.5) * intensity * 2;
+        const offsetY = (Math.random() - 0.5) * intensity * 2;
+        ctx.translate(offsetX, offsetY);
+      }
 
       // Draw Grid Background
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
@@ -293,12 +395,89 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.shadowBlur = 0;
       }
 
-      // Draw Player Square
-      ctx.fillStyle = '#F0A94E';
-      ctx.shadowColor = 'rgba(240, 169, 78, 0.6)';
-      ctx.shadowBlur = 12;
-      ctx.fillRect(state.x, state.y, state.width, state.height);
-      ctx.shadowBlur = 0;
+      // Draw Player Square (if alive)
+      if (!isGameOverRef.current) {
+        ctx.fillStyle = '#F0A94E';
+        ctx.shadowColor = 'rgba(240, 169, 78, 0.6)';
+        ctx.shadowBlur = 12;
+        ctx.fillRect(state.x, state.y, state.width, state.height);
+        ctx.shadowBlur = 0;
+      }
+
+      // Update and Draw Death Particles
+      if (deathParticlesRef.current.length > 0) {
+        for (let i = deathParticlesRef.current.length - 1; i >= 0; i--) {
+          const p = deathParticlesRef.current[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += 320 * dt; // gravity on debris
+          p.life += dt;
+          p.alpha = Math.max(0, 1 - p.life / p.maxLife);
+
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 8;
+          ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+          ctx.restore();
+        }
+        deathParticlesRef.current = deathParticlesRef.current.filter(p => p.life < p.maxLife);
+      }
+
+      // Restore camera shake transform
+      ctx.restore();
+
+      // Render Game Over Overlay Card on Canvas
+      if (isGameOverRef.current) {
+        ctx.fillStyle = 'rgba(9, 11, 16, 0.78)';
+        ctx.fillRect(0, 0, worldConfig.width, worldConfig.height);
+
+        const cardW = 280;
+        const cardH = 138;
+        const cardX = (worldConfig.width - cardW) / 2;
+        const cardY = (worldConfig.height - cardH) / 2;
+
+        // Card background
+        ctx.fillStyle = '#121622';
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+
+        // Card border with red glow
+        ctx.strokeStyle = '#F0616B';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(240, 97, 107, 0.7)';
+        ctx.shadowBlur = 14;
+        ctx.strokeRect(cardX + 0.5, cardY + 0.5, cardW - 1, cardH - 1);
+        ctx.shadowBlur = 0;
+
+        // Top header stripe
+        ctx.fillStyle = '#F0616B';
+        ctx.fillRect(cardX, cardY, cardW, 3);
+
+        // Heading
+        ctx.fillStyle = '#F0616B';
+        ctx.font = 'bold 20px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(240, 97, 107, 0.8)';
+        ctx.shadowBlur = 10;
+        ctx.fillText('☠ GAME OVER', cardX + cardW / 2, cardY + 40);
+        ctx.shadowBlur = 0;
+
+        // Subtitle
+        ctx.fillStyle = '#8E9AA8';
+        ctx.font = '11.5px "JetBrains Mono", monospace';
+        ctx.fillText('CAUGHT BY PURSUER AI', cardX + cardW / 2, cardY + 64);
+
+        // Pulsing retry prompt
+        const pulse = Math.sin(timestamp / 180) * 0.25 + 0.75;
+        ctx.fillStyle = `rgba(240, 169, 78, ${pulse})`;
+        ctx.font = 'bold 11px "JetBrains Mono", monospace';
+        ctx.fillText('↺ PRESS [SPACE] OR CLICK TO RETRY', cardX + cardW / 2, cardY + 104);
+
+        ctx.strokeStyle = `rgba(240, 169, 78, ${pulse * 0.5})`;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cardX + 18, cardY + 87, cardW - 36, 26);
+      }
 
       // Update Readouts state (throttled at 10Hz to prevent React re-render stutter)
       if (timestamp - lastReadoutTime > 100) {
@@ -306,8 +485,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         setReadout({
           x: Math.round(state.x),
           y: Math.round(state.y),
-          vx: Math.round(state.vx || 0),
-          vy: Math.round(state.vy || 0),
+          vx: Math.round(isGameOverRef.current ? 0 : state.vx || 0),
+          vy: Math.round(isGameOverRef.current ? 0 : state.vy || 0),
           fps: Math.round(fpsSmooth)
         });
       }
@@ -315,7 +494,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [updateFn, lessonId, onSuccess]);
+  }, [updateFn, lessonId, onSuccess, triggerDeath]);
 
   return (
     <div className="panel canvas-panel">
@@ -331,12 +510,33 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       </div>
 
       <div className="sim-body">
-        <canvas
-          ref={canvasRef}
-          width={worldConfig.width}
-          height={worldConfig.height}
-          tabIndex={0}
-        />
+        <div className="canvas-container">
+          <canvas
+            ref={canvasRef}
+            width={worldConfig.width}
+            height={worldConfig.height}
+            tabIndex={0}
+            onClick={() => {
+              if (isGameOverRef.current) respawn();
+            }}
+            style={{ cursor: isGameOver ? 'pointer' : 'default' }}
+          />
+
+          {isGameOver && (
+            <div className="game-over-banner" onClick={respawn}>
+              <span className="game-over-text">☠ Caught by pursuer!</span>
+              <button
+                className="btn-game-over-retry"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  respawn();
+                }}
+              >
+                ↺ Try Again <kbd>SPACE</kbd>
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="readout">
           <span>
@@ -356,8 +556,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           </span>
         </div>
 
-        <div className={`status ${isError ? 'err' : ''}`}>
-          {statusMessage}
+        <div className={`status ${isGameOver ? 'err' : isError ? 'err' : ''}`}>
+          {isGameOver ? '☠ SIGNAL LOST — Caught by enemy dot! Press [SPACE] or click canvas to retry.' : statusMessage}
         </div>
       </div>
     </div>
