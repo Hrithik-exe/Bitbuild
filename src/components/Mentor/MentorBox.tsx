@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, Terminal, Volume2 } from 'lucide-react';
+import { Bot, Terminal } from 'lucide-react';
 import type { DialogueLine } from '../../types/lesson';
 import { blipAudio } from '../../services/BlipAudio';
 
@@ -41,7 +41,6 @@ export const MentorBox: React.FC<MentorBoxProps> = ({
         setDisplayedText(prev => prev + nextChar);
         charIdx++;
 
-        // Trigger procedural blip audio tone per character
         if (nextChar !== ' ') {
           blipAudio.playBlip(activeLine.speaker, activeLine.blipPitch);
         }
@@ -70,16 +69,30 @@ export const MentorBox: React.FC<MentorBoxProps> = ({
     <div className={`mentor-box ${isPixel ? 'speaker-pixel' : 'speaker-byte'}`}>
       <div className="mentor-header">
         <div className="mentor-avatar">
-          {isPixel ? <Bot size={18} className="icon-pixel" /> : <Terminal size={18} className="icon-byte" />}
+          {isPixel ? <Bot size={16} className="icon-pixel" /> : <Terminal size={16} className="icon-byte" />}
         </div>
         <div className="mentor-info">
           <span className="mentor-name">{isPixel ? 'Mentor Pixel' : 'Mentor Byte'}</span>
           <span className="mentor-role">{isPixel ? 'Game Physics Mentor' : 'Systems & AI Mentor'}</span>
         </div>
 
-        <div className="blip-indicator">
-          <Volume2 size={12} className="blip-pulse" />
-          <span>WebAudio Voice Blip</span>
+        {/* Inline navigation in mentor header */}
+        <div className="mentor-step-nav">
+          {hasPrevLesson && (
+            <button className="btn-step-prev" onClick={onPrevLesson} title={`Previous: ${prevLessonLabel}`}>
+              ← {prevLessonLabel}
+            </button>
+          )}
+          {dialogueLines.length > 1 && (
+            <button className="btn-next-dialogue" onClick={nextDialogue}>
+              Next Tip ({currentLineIndex + 1}/{dialogueLines.length})
+            </button>
+          )}
+          {hasNextLesson && (
+            <button className="btn-step-next" onClick={onNextLesson} title={`Next: ${nextLessonLabel}`}>
+              Next: {nextLessonLabel} →
+            </button>
+          )}
         </div>
       </div>
 
@@ -88,29 +101,6 @@ export const MentorBox: React.FC<MentorBoxProps> = ({
           {displayedText}
           {isTyping && <span className="cursor-blink">|</span>}
         </p>
-      </div>
-
-      <div className="mentor-footer">
-        <div className="mentor-tips-group">
-          {dialogueLines.length > 1 && (
-            <button className="btn-next-dialogue" onClick={nextDialogue}>
-              Next Tip ({currentLineIndex + 1}/{dialogueLines.length}) →
-            </button>
-          )}
-        </div>
-
-        <div className="mentor-step-nav">
-          {hasPrevLesson && (
-            <button className="btn-step-prev" onClick={onPrevLesson} title={`Previous: ${prevLessonLabel}`}>
-              ← {prevLessonLabel}
-            </button>
-          )}
-          {hasNextLesson && (
-            <button className="btn-step-next" onClick={onNextLesson} title={`Next: ${nextLessonLabel}`}>
-              Next Step: {nextLessonLabel} →
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

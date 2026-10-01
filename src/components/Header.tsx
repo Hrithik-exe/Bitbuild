@@ -28,12 +28,12 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="header-top">
         <div className="eyebrow">
           <span className="live-dot" />
-          BITBUILD — INTERACTIVE GAME CODE LAB
+          BITBUILD
         </div>
 
         <div className="header-actions">
           <div className="xp-badge">
-            <Sparkles size={14} className="xp-icon" />
+            <Sparkles size={13} className="xp-icon" />
             <span>{currentXp} XP</span>
           </div>
 
@@ -58,39 +58,30 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          <button className="icon-btn" onClick={toggleMute} title={isMuted ? 'Unmute Sound' : 'Mute Sound'}>
-            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          <div className="view-switch">
+            <button
+              className={`view-btn ${activeView === 'sandbox' ? 'active' : ''}`}
+              onClick={() => setActiveView('sandbox')}
+            >
+              <Code2 size={14} />
+              <span>Sandbox</span>
+            </button>
+            <button
+              className={`view-btn ${activeView === 'skilltree' ? 'active' : ''}`}
+              onClick={() => setActiveView('skilltree')}
+            >
+              <Network size={14} />
+              <span>Skill Tree</span>
+            </button>
+          </div>
+
+          <button className="icon-btn" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
+            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
           </button>
 
           <button className="explain-bug-btn" onClick={onExplainBug}>
-            <ShieldAlert size={14} />
-            <span>Explain My Bug</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="header-main">
-        <div>
-          <h1 className="title-text">Learn game programming by editing the game</h1>
-          <p className="subtitle-text">
-            Every lesson is real code driving the live simulation. Change the code, hit Run ▶, and watch physics, collision, and AI behavior update instantly.
-          </p>
-        </div>
-
-        <div className="view-switch">
-          <button
-            className={`view-btn ${activeView === 'sandbox' ? 'active' : ''}`}
-            onClick={() => setActiveView('sandbox')}
-          >
-            <Code2 size={15} />
-            <span>Sandbox Workspace</span>
-          </button>
-          <button
-            className={`view-btn ${activeView === 'skilltree' ? 'active' : ''}`}
-            onClick={() => setActiveView('skilltree')}
-          >
-            <Network size={15} />
-            <span>Skill Tree Map</span>
+            <ShieldAlert size={13} />
+            <span>Explain Bug</span>
           </button>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { cpp } from '@codemirror/lang-cpp';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { Play, RotateCcw, FileCode, CheckCircle2 } from 'lucide-react';
+import { Play, RotateCcw, FileCode } from 'lucide-react';
 import type { Language } from '../../types/lesson';
 
 interface CodeEditorProps {
@@ -63,8 +63,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         EditorView.theme({
           '&': {
             height: '100%',
-            minHeight: '340px',
-            fontSize: '13.5px',
+            fontSize: '13px',
             fontFamily: "'JetBrains Mono', monospace",
             backgroundColor: '#12151F'
           },
@@ -115,11 +114,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           <FileCode size={14} className="accent-icon" />
           <span>{filename}</span>
         </div>
-        <div className="dot-row">
-          <div className="pdot"></div>
-          <div className="pdot"></div>
-          <div className="pdot"></div>
-        </div>
       </div>
 
       <div className="editor-wrapper" ref={editorContainerRef} />
@@ -132,12 +126,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
         <button className="btn-reset" onClick={onReset}>
           <RotateCcw size={13} />
-          <span>Reset lesson</span>
+          <span>Reset</span>
         </button>
-
-        <div className="keyboard-shortcut-hint">
-          <CheckCircle2 size={12} /> Auto-saves edits
-        </div>
       </div>
     </div>
   );

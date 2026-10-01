@@ -230,7 +230,7 @@ export function App() {
           }}
         />
       ) : (
-        <>
+        <div className="sandbox-layout">
           {/* Lesson Tabs Navigation */}
           <div className="tabs">
             {lessons.map(l => {
@@ -252,7 +252,7 @@ export function App() {
           {/* Sub-step Pieces Bar for Level 2 (and any multi-piece level) */}
           {currentLesson.pieces && currentLesson.pieces.length > 0 && (
             <div className="level-pieces-bar">
-              <span className="pieces-bar-title">{currentLesson.label} Pieces:</span>
+              <span className="pieces-bar-title">{currentLesson.label}:</span>
               <div className="pieces-pills">
                 {currentLesson.pieces.map((piece, idx) => {
                   const isActive = idx === currentPieceIndex;
@@ -307,7 +307,7 @@ export function App() {
 
           {/* Detailed Lesson Instructions & Notes */}
           <LessonNote note={activeNote} />
-        </>
+        </div>
       )}
 
       {/* "Explain My Bug" AI Diagnostics Modal Drawer */}
