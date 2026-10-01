@@ -41,13 +41,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Initialize World Config with entities driven dynamically by user code
   const initWorld = useCallback((currentLessonId: string): WorldConfig => {
-    const isGroundless = currentLessonId === 'move' || currentLessonId === 'gravity-1';
+    const isGroundless = ['move', 'gravity', 'gravity-1'].includes(currentLessonId);
+    const hasPlatform = ['collision', 'capstone'].includes(currentLessonId);
+    const hasGoal = currentLessonId === 'capstone';
     return {
       width: 480,
       height: 280,
       groundY: isGroundless ? -1 : 240,
-      platform: ['collision', 'capstone'].includes(currentLessonId) ? { x: 250, y: 145, w: 120, h: 20 } : null,
-      goal: currentLessonId === 'capstone' ? { x: 416, y: 175, w: 38, h: 65 } : null
+      platform: hasPlatform ? { x: 250, y: 145, w: 120, h: 20 } : null,
+      goal: hasGoal ? { x: 416, y: 175, w: 38, h: 65 } : null
     };
   }, []);
 
@@ -55,24 +57,27 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Simulation State: Player starts at (60,60) for free movement, or grounded on floor for physics
   const isMoveLesson = lessonId === 'move';
-  const isAirborne = ['move', 'gravity-1', 'gravity-2'].includes(lessonId);
+  const isAirborne = ['move', 'gravity', 'gravity-1', 'gravity-2'].includes(lessonId);
+  const hasEnemyLesson = ['chase', 'capstone'].includes(lessonId);
+  const isCapstone = lessonId === 'capstone';
+
   const stateRef = useRef<PlayerState>({
     x: 60,
-    y: lessonId === 'gravity-1' ? 30 : lessonId === 'gravity-2' ? 40 : isMoveLesson ? 60 : 218,
+    y: lessonId === 'gravity-1' || lessonId === 'gravity' ? 30 : lessonId === 'gravity-2' ? 40 : isMoveLesson ? 60 : 218,
     vx: 0,
     vy: 0,
     width: 22,
     height: 22,
     onGround: !isAirborne,
-    enemyX: 400,
-    enemyY: 70,
+    enemyX: hasEnemyLesson ? 400 : -100,
+    enemyY: hasEnemyLesson ? 70 : -100,
     enemyRadius: 10,
     score: 0,
-    coins: [
+    coins: isCapstone ? [
       { x: 300, y: 115, collected: false },
       { x: 160, y: 185, collected: false },
       { x: 360, y: 215, collected: false }
-    ]
+    ] : []
   });
 
   const keysRef = useRef<Record<string, boolean>>({
@@ -95,23 +100,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     deathParticlesRef.current = [];
     shakeTimeRef.current = 0;
 
+    const currentId = lessonIdRef.current;
     // Reset world entities according to current lesson defaults
-    worldRef.current = initWorld(lessonIdRef.current);
+    worldRef.current = initWorld(currentId);
 
     const gY = typeof worldRef.current.groundY === 'number' && worldRef.current.groundY > 0
       ? worldRef.current.groundY
       : 240;
     const pH = stateRef.current.height || 22;
 
-    if (lessonIdRef.current === 'move') {
+    if (currentId === 'move') {
       stateRef.current.x = 60;
       stateRef.current.y = 60;
       stateRef.current.onGround = false;
-    } else if (lessonIdRef.current === 'gravity-1') {
+    } else if (currentId === 'gravity' || currentId === 'gravity-1') {
       stateRef.current.x = 60;
       stateRef.current.y = 30; // High in the air to demonstrate free fall
       stateRef.current.onGround = false;
-    } else if (lessonIdRef.current === 'gravity-2') {
+    } else if (currentId === 'gravity-2') {
       stateRef.current.x = 60;
       stateRef.current.y = 40; // Mid-air to demonstrate landing on the floor
       stateRef.current.onGround = false;
@@ -124,16 +130,21 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     stateRef.current.vy = 0;
     stateRef.current.width = 22;
     stateRef.current.height = 22;
-    stateRef.current.enemyX = 400;
-    stateRef.current.enemyY = 70;
+
+    const hasEnemy = ['chase', 'capstone'].includes(currentId);
+    stateRef.current.enemyX = hasEnemy ? 400 : -100;
+    stateRef.current.enemyY = hasEnemy ? 70 : -100;
     stateRef.current.enemyRadius = 10;
 
-    if (lessonIdRef.current === 'capstone') {
+    if (currentId === 'capstone') {
       stateRef.current.coins = [
         { x: 300, y: 115, collected: false },
         { x: 160, y: 185, collected: false },
         { x: 360, y: 215, collected: false }
       ];
+      stateRef.current.score = 0;
+    } else {
+      stateRef.current.coins = [];
       stateRef.current.score = 0;
     }
 
@@ -279,10 +290,34 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           }
         }
 
-        // Check Enemy Collision (Death Animation Trigger)
-        const hasEnemy = typeof state.enemyX === 'number' && typeof state.enemyY === 'number' &&
-          (['chase', 'capstone'].includes(lessonId) || state.enemyX > 0);
-        if (hasEnemy && !isWon) {
+        // STRICT LEVEL SANITIZATION: enforce that lessons only retain elements they need
+        const isCapstoneLesson = lessonId === 'capstone';
+        const isChaseOrCapstone = ['chase', 'capstone'].includes(lessonId);
+        const isPlatformLesson = ['collision', 'capstone'].includes(lessonId);
+
+        // 1. Coins only exist in capstone (remove blue dots everywhere else)
+        if (!isCapstoneLesson && state.coins && state.coins.length > 0) {
+          state.coins = [];
+        }
+
+        // 2. Enemy only exists in chase & capstone (remove red dot everywhere else)
+        if (!isChaseOrCapstone) {
+          state.enemyX = -100;
+          state.enemyY = -100;
+        }
+
+        // 3. Platform only exists in collision & capstone (remove blue box everywhere else)
+        if (!isPlatformLesson && world.platform) {
+          world.platform = null;
+        }
+
+        // 4. Portal only exists in capstone (remove portal everywhere else)
+        if (!isCapstoneLesson && world.goal) {
+          world.goal = null;
+        }
+
+        // Check Enemy Collision (Death Animation Trigger) - ONLY in chase & capstone
+        if (isChaseOrCapstone && typeof state.enemyX === 'number' && typeof state.enemyY === 'number' && state.enemyX > 0 && !isWon) {
           const px = state.x + (state.width || 22) / 2;
           const py = state.y + (state.height || 22) / 2;
           const distToEnemy = Math.hypot(px - state.enemyX, py - state.enemyY);
@@ -292,9 +327,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           }
         }
 
-        // Capstone Win Condition Check (Dynamic portal hitbox)
+        // Capstone Win Condition Check (Dynamic portal hitbox) - ONLY in capstone
         const currentGoal = world.goal;
-        if (currentGoal && lessonId === 'capstone' && !isWon) {
+        if (isCapstoneLesson && currentGoal && !isWon) {
           const playerHitsGoal =
             state.x < currentGoal.x + currentGoal.w &&
             state.x + (state.width || 22) > currentGoal.x &&
@@ -345,7 +380,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       // Draw Ground (Driven dynamically by world.groundY - only for lessons with ground physics)
-      const hasGround = !['move', 'gravity-1'].includes(lessonId) && typeof world.groundY === 'number' && world.groundY > 0;
+      const hasGround = !['move', 'gravity', 'gravity-1'].includes(lessonId) && typeof world.groundY === 'number' && world.groundY > 0;
       if (hasGround) {
         const groundY = world.groundY;
         ctx.strokeStyle = '#252B3B';
@@ -459,8 +494,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.restore();
       }
 
-      // Draw Platform (Collision Box: Driven dynamically by world.platform)
-      const p = world.platform;
+      // Draw Platform (Collision Box: ONLY for collision & capstone levels)
+      const isPlatformLesson = ['collision', 'capstone'].includes(lessonId);
+      const p = isPlatformLesson ? world.platform : null;
       if (p && typeof p.x === 'number' && typeof p.y === 'number' && typeof p.w === 'number' && typeof p.h === 'number') {
         ctx.fillStyle = '#181C29';
         ctx.strokeStyle = '#4FD1C5';
@@ -490,8 +526,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.fillRect(p.x + p.w - 2.5, p.y + p.h - 2.5, 2.5, 2.5);
       }
 
-      // Draw Coins / Energy Gems (Driven dynamically by state.coins)
-      if (state.coins && state.coins.length > 0) {
+      // Draw Coins / Energy Gems (Blue dots: ONLY in capstone level)
+      if (lessonId === 'capstone' && state.coins && state.coins.length > 0) {
         state.coins.forEach(coin => {
           if (!coin.collected) {
             ctx.fillStyle = '#4FD1C5';
@@ -505,8 +541,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         });
       }
 
-      // Draw Portal Goal (Driven dynamically by world.goal)
-      const g = world.goal;
+      // Draw Portal Goal (ONLY in capstone level)
+      const g = lessonId === 'capstone' ? world.goal : null;
       if (g && typeof g.x === 'number' && typeof g.y === 'number' && typeof g.w === 'number' && typeof g.h === 'number') {
         const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
         const coinsCollectedCount = state.coins ? state.coins.filter(c => c.collected).length : 0;
@@ -549,8 +585,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
-      // Draw Enemy (Driven dynamically by state.enemyX, state.enemyY, state.enemyRadius)
-      if (typeof state.enemyX === 'number' && typeof state.enemyY === 'number' && (['chase', 'capstone'].includes(lessonId) || state.enemyX > 0)) {
+      // Draw Enemy (Red dot: ONLY in chase & capstone levels)
+      const isEnemyLesson = ['chase', 'capstone'].includes(lessonId);
+      if (isEnemyLesson && typeof state.enemyX === 'number' && typeof state.enemyY === 'number' && state.enemyX > 0) {
         const enemyR = typeof state.enemyRadius === 'number' ? state.enemyRadius : 10;
         ctx.fillStyle = '#F0616B';
         ctx.shadowColor = 'rgba(240, 97, 107, 0.8)';
@@ -656,7 +693,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         let displayY = Math.round(state.y);
         let displayVy = Math.round(isGameOverRef.current ? 0 : state.vy || 0);
 
-        if (coordModeRef.current === 'math') {
+        const isGroundless = ['move', 'gravity', 'gravity-1'].includes(lessonId);
+        if (!isGroundless && coordModeRef.current === 'math') {
           // In math mode: Ground level is altitude 0. Going up is +Y.
           displayY = Math.round((gY - pH) - state.y);
           // Moving up in canvas is -vy, which is +vy in math coordinates!
@@ -685,7 +723,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         </div>
 
         {/* Coordinate Mode Toggle (Math Cartesian vs Screen Raster) - only when ground physics is used */}
-        {!['move', 'gravity-1'].includes(lessonId) && (
+        {!['move', 'gravity', 'gravity-1'].includes(lessonId) && (
           <div className="canvas-header-controls">
             <div className="coord-mode-selector">
               <button
@@ -779,7 +817,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           </span>
           <span>
             y <b className="val-teal">{readout.y}</b>{' '}
-            {!['move', 'gravity-1'].includes(lessonId) && (
+            {!['move', 'gravity', 'gravity-1'].includes(lessonId) && (
               <span style={{ fontSize: '10px', opacity: 0.7 }}>
                 {coordMode === 'math' ? '(altitude ↑)' : '(screen ↓)'}
               </span>
