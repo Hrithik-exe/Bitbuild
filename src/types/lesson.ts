@@ -12,6 +12,15 @@ export interface DialogueLine {
   blipPitch?: [number, number]; // [minFreq, maxFreq]
 }
 
+export interface LessonPiece {
+  id: string;
+  num: string;
+  label: string;
+  note: LessonNote;
+  code: Record<Language, string>;
+  mentorLines: DialogueLine[];
+}
+
 export interface Lesson {
   id: string;
   num: string;
@@ -21,6 +30,7 @@ export interface Lesson {
   note: LessonNote;
   code: Record<Language, string>;
   mentorLines: DialogueLine[];
+  pieces?: LessonPiece[];
 }
 
 export interface PlayerState {

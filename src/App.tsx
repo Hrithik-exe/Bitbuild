@@ -105,18 +105,32 @@ export function App() {
     compileCode(code, language);
   }, [code, language, compileCode]);
 
-  // Synchronize starter code & auto-start simulation when lesson or language changes
+  // Synchronize starter code & auto-start simulation when lesson, piece, or language changes
+  const [currentPieceIndex, setCurrentPieceIndex] = useState(0);
+  const [completedPieceIds, setCompletedPieceIds] = useState<string[]>([]);
+
+  // Derive active piece if current lesson has pieces (e.g. Level 2)
+  const activePiece = currentLesson.pieces && currentLesson.pieces.length > 0
+    ? currentLesson.pieces[currentPieceIndex] || currentLesson.pieces[0]
+    : null;
+
+  const activeCode = activePiece
+    ? activePiece.code[language] || activePiece.code.javascript
+    : currentLesson.code[language] || currentLesson.code.javascript;
+
+  const activeNote = activePiece ? activePiece.note : currentLesson.note;
+  const activeMentorLines = activePiece ? activePiece.mentorLines : currentLesson.mentorLines;
+  const activeSimId = activePiece ? activePiece.id : currentLesson.id;
+
   useEffect(() => {
-    const starter = currentLesson.code[language] || currentLesson.code.javascript;
-    setCode(starter);
-    compileCode(starter, language);
-  }, [currentLesson, language, compileCode]);
+    setCode(activeCode);
+    compileCode(activeCode, language);
+  }, [activeCode, language, compileCode]);
 
   // Handle lesson reset
   const handleReset = () => {
-    const defaultCode = currentLesson.code[language] || currentLesson.code.javascript;
-    setCode(defaultCode);
-    compileCode(defaultCode, language);
+    setCode(activeCode);
+    compileCode(activeCode, language);
     setStatusMessage('Lesson code reset & running.');
   };
 
@@ -133,6 +147,7 @@ export function App() {
   // Switch active lesson
   const loadLesson = (lesson: Lesson) => {
     setCurrentLesson(lesson);
+    setCurrentPieceIndex(0);
     setActiveView('sandbox');
   };
 
@@ -141,24 +156,54 @@ export function App() {
   const prevLesson = currentIdx > 0 ? lessons[currentIdx - 1] : null;
   const nextLesson = currentIdx < lessons.length - 1 ? lessons[currentIdx + 1] : null;
 
-  const goToNextLesson = useCallback(() => {
-    if (nextLesson) {
+  const hasNext = Boolean(
+    (currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1) || nextLesson
+  );
+  const hasPrev = Boolean(
+    (currentLesson.pieces && currentPieceIndex > 0) || prevLesson
+  );
+
+  let nextLabel = '';
+  if (currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1) {
+    const np = currentLesson.pieces[currentPieceIndex + 1];
+    nextLabel = `${np.num}: ${np.label}`;
+  } else if (nextLesson) {
+    nextLabel = `${nextLesson.num} ${nextLesson.label}`;
+  }
+
+  let prevLabel = '';
+  if (currentLesson.pieces && currentPieceIndex > 0) {
+    const pp = currentLesson.pieces[currentPieceIndex - 1];
+    prevLabel = `${pp.num}: ${pp.label}`;
+  } else if (prevLesson) {
+    prevLabel = `${prevLesson.num} ${prevLesson.label}`;
+  }
+
+  const goToNextStep = useCallback(() => {
+    if (currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1) {
+      if (activePiece && !completedPieceIds.includes(activePiece.id)) {
+        setCompletedPieceIds(prev => [...prev, activePiece.id]);
+        setCurrentXp(prev => prev + 25);
+        blipAudio.playSuccessTone();
+      }
+      setCurrentPieceIndex(prev => prev + 1);
+    } else if (nextLesson) {
       if (!completedLessonIds.includes(currentLesson.id)) {
         setCompletedLessonIds(prev => [...prev, currentLesson.id]);
         setCurrentXp(prev => prev + currentLesson.xp);
         blipAudio.playSuccessTone();
       }
-      setCurrentLesson(nextLesson);
-      setActiveView('sandbox');
+      loadLesson(nextLesson);
     }
-  }, [nextLesson, currentLesson, completedLessonIds]);
+  }, [currentLesson, currentPieceIndex, activePiece, completedPieceIds, completedLessonIds, nextLesson]);
 
-  const goToPrevLesson = useCallback(() => {
-    if (prevLesson) {
-      setCurrentLesson(prevLesson);
-      setActiveView('sandbox');
+  const goToPrevStep = useCallback(() => {
+    if (currentLesson.pieces && currentPieceIndex > 0) {
+      setCurrentPieceIndex(prev => prev - 1);
+    } else if (prevLesson) {
+      loadLesson(prevLesson);
     }
-  }, [prevLesson]);
+  }, [currentLesson, currentPieceIndex, prevLesson]);
 
   return (
     <div className="app-container">
@@ -204,6 +249,30 @@ export function App() {
             })}
           </div>
 
+          {/* Sub-step Pieces Bar for Level 2 (and any multi-piece level) */}
+          {currentLesson.pieces && currentLesson.pieces.length > 0 && (
+            <div className="level-pieces-bar">
+              <span className="pieces-bar-title">{currentLesson.label} Pieces:</span>
+              <div className="pieces-pills">
+                {currentLesson.pieces.map((piece, idx) => {
+                  const isActive = idx === currentPieceIndex;
+                  const isDone = completedPieceIds.includes(piece.id);
+                  return (
+                    <button
+                      key={piece.id}
+                      className={`piece-pill ${isActive ? 'active' : ''} ${isDone ? 'completed' : ''}`}
+                      onClick={() => setCurrentPieceIndex(idx)}
+                    >
+                      <span className="piece-num">{idx + 1}</span>
+                      <span className="piece-title">{piece.label}</span>
+                      {isDone && <span className="piece-check">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* 2-Panel Split Grid Workspace */}
           <div className="grid">
             <CodeEditor
@@ -220,24 +289,24 @@ export function App() {
               updateFn={updateFn}
               statusMessage={statusMessage}
               isError={isError}
-              lessonId={currentLesson.id}
+              lessonId={activeSimId}
               onSuccess={handleLessonSuccess}
             />
           </div>
 
           {/* Undertale-style Procedural Mentor Voice Dialogue with Step Navigation */}
           <MentorBox
-            dialogueLines={currentLesson.mentorLines}
-            onNextLesson={goToNextLesson}
-            onPrevLesson={goToPrevLesson}
-            hasNextLesson={Boolean(nextLesson)}
-            hasPrevLesson={Boolean(prevLesson)}
-            nextLessonLabel={nextLesson ? `${nextLesson.num} ${nextLesson.label}` : ''}
-            prevLessonLabel={prevLesson ? `${prevLesson.num} ${prevLesson.label}` : ''}
+            dialogueLines={activeMentorLines}
+            onNextLesson={goToNextStep}
+            onPrevLesson={goToPrevStep}
+            hasNextLesson={hasNext}
+            hasPrevLesson={hasPrev}
+            nextLessonLabel={nextLabel}
+            prevLessonLabel={prevLabel}
           />
 
           {/* Detailed Lesson Instructions & Notes */}
-          <LessonNote note={currentLesson.note} />
+          <LessonNote note={activeNote} />
         </>
       )}
 
