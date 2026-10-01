@@ -80,7 +80,7 @@ export function App() {
           height: 280,
           groundY: 240,
           platform: { x: 280, y: 145, w: 100, h: 18 },
-          goal: { x: 420, y: 190, w: 32, h: 48 }
+          goal: { x: 416, y: 180, w: 38, h: 60 }
         }
       );
 

@@ -469,7 +469,7 @@ if (state.coins) {
     if (!coin.collected) {
       const cdx = state.x + 11 - coin.x;
       const cdy = state.y + 11 - coin.y;
-      if (Math.sqrt(cdx * cdx + cdy * cdy) < 20) {
+      if (Math.sqrt(cdx * cdx + cdy * cdy) < 28) {
         coin.collected = true;
         state.score = (state.score || 0) + 100;
       }
@@ -536,7 +536,7 @@ if state.get('coins'):
         if not coin.get('collected'):
             cdx = state['x'] + 11 - coin['x']
             cdy = state['y'] + 11 - coin['y']
-            if (cdx * cdx + cdy * cdy) ** 0.5 < 20:
+            if (cdx * cdx + cdy * cdy) ** 0.5 < 28:
                 coin['collected'] = True
                 state['score'] = (state.get('score') or 0) + 100`,
       cpp: `// C++ Boss Capstone
@@ -597,7 +597,7 @@ if (state.coins) {
     if (!coin.collected) {
       float cdx = state.x + 11 - coin.x;
       float cdy = state.y + 11 - coin.y;
-      if (Math.sqrt(cdx * cdx + cdy * cdy) < 20) {
+      if (std::sqrt(cdx * cdx + cdy * cdy) < 28.0f) {
         coin.collected = true;
         state.score = (state.score || 0) + 100;
       }

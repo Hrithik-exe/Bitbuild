@@ -51,7 +51,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     height: 280,
     groundY: 240,
     platform: { x: 280, y: 145, w: 100, h: 18 },
-    goal: { x: 420, y: 190, w: 32, h: 48 }
+    goal: { x: 416, y: 180, w: 38, h: 60 }
   };
 
   // Reset state when lesson changes
@@ -68,9 +68,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       enemyY: 70,
       score: 0,
       coins: [
-        { x: 320, y: 110, collected: false },
-        { x: 200, y: 190, collected: false },
-        { x: 410, y: 200, collected: false }
+        { x: 330, y: 110, collected: false },
+        { x: 180, y: 180, collected: false },
+        { x: 360, y: 215, collected: false }
       ]
     };
   }, [lessonId]);
@@ -160,12 +160,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       }
 
-      // Capstone Win Condition Check
+      // Capstone Win Condition Check (Accurate 2D AABB Hitbox)
       if (lessonId === 'capstone' && !isWon) {
-        const allCoinsCollected = state.coins.every(c => c.collected);
-        if (allCoinsCollected && state.x > worldConfig.goal.x - 10) {
+        const g = worldConfig.goal;
+        const playerHitsGoal =
+          state.x < g.x + g.w &&
+          state.x + state.width > g.x &&
+          state.y < g.y + g.h &&
+          state.y + state.height > g.y;
+
+        const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
+
+        if (playerHitsGoal && allCoinsCollected) {
           isWon = true;
-          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
           if (onSuccess) onSuccess();
         }
       }
@@ -231,16 +239,47 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           }
         });
 
-        // Draw Portal Goal
+        // Draw Portal Goal (Active Radiant Green when open, Amber when locked)
         const g = worldConfig.goal;
-        ctx.fillStyle = 'rgba(0, 255, 136, 0.15)';
-        ctx.strokeStyle = '#00ff88';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = 'rgba(0, 255, 136, 0.6)';
-        ctx.shadowBlur = 15;
-        ctx.fillRect(g.x, g.y, g.w, g.h);
-        ctx.strokeRect(g.x, g.y, g.w, g.h);
-        ctx.shadowBlur = 0;
+        const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
+        const coinsCollectedCount = state.coins ? state.coins.filter(c => c.collected).length : 0;
+        const totalCoins = state.coins ? state.coins.length : 3;
+
+        if (allCoinsCollected) {
+          // Open Radiant Green Portal
+          ctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
+          ctx.strokeStyle = '#00ff88';
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = 'rgba(0, 255, 136, 0.8)';
+          ctx.shadowBlur = 18;
+          ctx.fillRect(g.x, g.y, g.w, g.h);
+          ctx.strokeRect(g.x + 0.5, g.y + 0.5, g.w - 1, g.h - 1);
+          ctx.shadowBlur = 0;
+
+          // Inner portal label
+          ctx.fillStyle = '#00ff88';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('PORTAL', g.x + g.w / 2, g.y + g.h / 2 - 2);
+          ctx.fillText('OPEN', g.x + g.w / 2, g.y + g.h / 2 + 10);
+        } else {
+          // Locked Amber Portal
+          ctx.fillStyle = 'rgba(240, 169, 78, 0.1)';
+          ctx.strokeStyle = '#F0A94E';
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = 'rgba(240, 169, 78, 0.4)';
+          ctx.shadowBlur = 8;
+          ctx.fillRect(g.x, g.y, g.w, g.h);
+          ctx.strokeRect(g.x + 0.5, g.y + 0.5, g.w - 1, g.h - 1);
+          ctx.shadowBlur = 0;
+
+          // Locked label showing progress
+          ctx.fillStyle = '#F0A94E';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('LOCKED', g.x + g.w / 2, g.y + g.h / 2 - 2);
+          ctx.fillText(`${coinsCollectedCount}/${totalCoins}`, g.x + g.w / 2, g.y + g.h / 2 + 10);
+        }
       }
 
       // Draw Enemy (Chase AI & Capstone)
