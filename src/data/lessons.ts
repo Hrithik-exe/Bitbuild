@@ -106,7 +106,7 @@ state.y = std::clamp(state.y, 0.0f, world.height - state.height);`
       { speaker: 'mentorB', text: 'Press UP arrow to jump! Watch out for infinite mid-air jumps if onGround is ignored.', trigger: 'onEnter' }
     ],
     code: {
-      javascript: `// Ground floor height (adjust this to change the floor level!)
+      javascript: `// Floor line is at y = 240. Since player is 22px tall, standing on floor puts top-left y = 240 - 22 = 218.
 world.groundY = 240;
 
 const gravity = 800;    // downward acceleration (px/s^2)
@@ -129,7 +129,7 @@ if (keys.up && state.onGround) {
 state.x += state.vx * dt;
 state.y += state.vy * dt;
 
-// Ground landing check
+// Ground landing check (ground level is 240 - 22 = 218)
 const groundY = world.groundY - state.height;
 if (state.y >= groundY) {
   state.y = groundY;
@@ -141,6 +141,7 @@ if (state.y >= groundY) {
 
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
       python: `# Python Gravity & Jump Implementation
+# Floor line is at 240 (standing on floor puts player top-left at 240 - 22 = 218)
 world['groundY'] = 240
 
 gravity = 800.0
@@ -173,6 +174,7 @@ else:
 
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))`,
       cpp: `// C++ Physics Sandbox
+// Floor line is at 240 (standing on floor puts player top-left at 240 - 22 = 218)
 world.groundY = 240.0f;
 
 float gravity = 800.0f;
@@ -221,6 +223,7 @@ if (state.y >= groundY) {
       javascript: `// 1. Define the platform collision box: [x, y, width, height]
 // You have full control! Adjust these numbers to reposition or resize the platform box.
 world.platform = { x: 250, y: 145, w: 120, h: 20 };
+// Floor line is at y = 240. With player height = 22, standing on the floor is at y = 240 - 22 = 218.
 world.groundY = 240;
 
 const speed = 160;
@@ -272,7 +275,7 @@ if (!hitsY) {
   }
 }
 
-// 4. Ground landing
+// 4. Ground landing (floor y is 240 - 22 = 218)
 const groundY = world.groundY - state.height;
 if (state.y >= groundY) {
   state.y = groundY;
@@ -335,7 +338,7 @@ else:
         state['y'] = p['y'] + p['h']
         state['vy'] = 0.0
 
-# 4. Ground landing
+# 4. Ground landing (floor y is 240 - 22 = 218)
 ground_y = world['groundY'] - state['height']
 if state['y'] >= ground_y:
     state['y'] = ground_y

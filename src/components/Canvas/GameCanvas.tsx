@@ -31,7 +31,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   onSuccess
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [readout, setReadout] = useState<ReadoutData>({ x: 0, y: 0, vx: 0, vy: 0, fps: 60 });
+  const [readout, setReadout] = useState<ReadoutData>({ x: 40, y: 218, vx: 0, vy: 0, fps: 60 });
   const [isGameOver, setIsGameOver] = useState(false);
 
   // Initialize World Config with entities driven dynamically by user code
@@ -47,15 +47,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const worldRef = useRef<WorldConfig>(initWorld(lessonId));
 
-  // Simulation State
+  // Simulation State: Player starts grounded on the floor (groundY 240 - height 22 = 218)
   const stateRef = useRef<PlayerState>({
     x: 40,
-    y: 40,
+    y: 218,
     vx: 0,
     vy: 0,
     width: 22,
     height: 22,
-    onGround: false,
+    onGround: true,
     enemyX: 400,
     enemyY: 70,
     enemyRadius: 10,
@@ -90,13 +90,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     // Reset world entities according to current lesson defaults
     worldRef.current = initWorld(lessonIdRef.current);
 
+    const gY = typeof worldRef.current.groundY === 'number' ? worldRef.current.groundY : 240;
+    const pH = stateRef.current.height || 22;
+
     stateRef.current.x = 40;
-    stateRef.current.y = 40;
+    stateRef.current.y = gY - pH; // Spawn grounded flush on the floor (218)
     stateRef.current.vx = 0;
     stateRef.current.vy = 0;
     stateRef.current.width = 22;
     stateRef.current.height = 22;
-    stateRef.current.onGround = false;
+    stateRef.current.onGround = true;
     stateRef.current.enemyX = 400;
     stateRef.current.enemyY = 70;
     stateRef.current.enemyRadius = 10;
