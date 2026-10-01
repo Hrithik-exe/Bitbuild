@@ -136,6 +136,30 @@ export function App() {
     setActiveView('sandbox');
   };
 
+  // Navigation for Next and Prev piece-by-piece lessons
+  const currentIdx = lessons.findIndex(l => l.id === currentLesson.id);
+  const prevLesson = currentIdx > 0 ? lessons[currentIdx - 1] : null;
+  const nextLesson = currentIdx < lessons.length - 1 ? lessons[currentIdx + 1] : null;
+
+  const goToNextLesson = useCallback(() => {
+    if (nextLesson) {
+      if (!completedLessonIds.includes(currentLesson.id)) {
+        setCompletedLessonIds(prev => [...prev, currentLesson.id]);
+        setCurrentXp(prev => prev + currentLesson.xp);
+        blipAudio.playSuccessTone();
+      }
+      setCurrentLesson(nextLesson);
+      setActiveView('sandbox');
+    }
+  }, [nextLesson, currentLesson, completedLessonIds]);
+
+  const goToPrevLesson = useCallback(() => {
+    if (prevLesson) {
+      setCurrentLesson(prevLesson);
+      setActiveView('sandbox');
+    }
+  }, [prevLesson]);
+
   return (
     <div className="app-container">
       <Header
@@ -201,8 +225,16 @@ export function App() {
             />
           </div>
 
-          {/* Undertale-style Procedural Mentor Voice Dialogue */}
-          <MentorBox dialogueLines={currentLesson.mentorLines} />
+          {/* Undertale-style Procedural Mentor Voice Dialogue with Step Navigation */}
+          <MentorBox
+            dialogueLines={currentLesson.mentorLines}
+            onNextLesson={goToNextLesson}
+            onPrevLesson={goToPrevLesson}
+            hasNextLesson={Boolean(nextLesson)}
+            hasPrevLesson={Boolean(prevLesson)}
+            nextLessonLabel={nextLesson ? `${nextLesson.num} ${nextLesson.label}` : ''}
+            prevLessonLabel={prevLesson ? `${prevLesson.num} ${prevLesson.label}` : ''}
+          />
 
           {/* Detailed Lesson Instructions & Notes */}
           <LessonNote note={currentLesson.note} />

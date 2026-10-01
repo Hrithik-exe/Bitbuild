@@ -813,7 +813,9 @@ code.inline {
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid var(--border);
-  padding-top: 8px;
+  padding-top: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .dialogue-counter {
@@ -822,18 +824,81 @@ code.inline {
   color: var(--text-muted);
 }
 
+.mentor-tips-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .btn-next-dialogue {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 11px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .btn-next-dialogue:hover {
   color: var(--text);
   border-color: var(--text-muted);
+}
+
+.mentor-step-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.btn-step-prev {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-step-prev:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.btn-step-next {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 12.5px;
+  background: linear-gradient(135deg, #F0A94E 0%, #E68A2E 100%);
+  color: #12151F;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(240, 169, 78, 0.35);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-step-next:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(240, 169, 78, 0.55);
+  background: linear-gradient(135deg, #FFBD66 0%, #F0A94E 100%);
+}
+
+.btn-step-next:active {
+  transform: translateY(0);
 }
 
 /* Skill Tree Layout */

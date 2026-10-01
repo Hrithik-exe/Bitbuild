@@ -41,10 +41,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Initialize World Config with entities driven dynamically by user code
   const initWorld = useCallback((currentLessonId: string): WorldConfig => {
+    const isGroundless = currentLessonId === 'move' || currentLessonId === 'gravity-1';
     return {
       width: 480,
       height: 280,
-      groundY: 240,
+      groundY: isGroundless ? -1 : 240,
       platform: ['collision', 'capstone'].includes(currentLessonId) ? { x: 250, y: 145, w: 120, h: 20 } : null,
       goal: currentLessonId === 'capstone' ? { x: 416, y: 175, w: 38, h: 65 } : null
     };
@@ -52,15 +53,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const worldRef = useRef<WorldConfig>(initWorld(lessonId));
 
-  // Simulation State: Player starts grounded on the floor (groundY 240 - height 22 = 218)
+  // Simulation State: Player starts at (60,60) for free movement, or grounded on floor for physics
+  const isMoveLesson = lessonId === 'move';
+  const isAirborne = ['move', 'gravity-1', 'gravity-2'].includes(lessonId);
   const stateRef = useRef<PlayerState>({
-    x: 40,
-    y: 218,
+    x: 60,
+    y: lessonId === 'gravity-1' ? 30 : lessonId === 'gravity-2' ? 40 : isMoveLesson ? 60 : 218,
     vx: 0,
     vy: 0,
     width: 22,
     height: 22,
-    onGround: true,
+    onGround: !isAirborne,
     enemyX: 400,
     enemyY: 70,
     enemyRadius: 10,
@@ -95,16 +98,32 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     // Reset world entities according to current lesson defaults
     worldRef.current = initWorld(lessonIdRef.current);
 
-    const gY = typeof worldRef.current.groundY === 'number' ? worldRef.current.groundY : 240;
+    const gY = typeof worldRef.current.groundY === 'number' && worldRef.current.groundY > 0
+      ? worldRef.current.groundY
+      : 240;
     const pH = stateRef.current.height || 22;
 
-    stateRef.current.x = 40;
-    stateRef.current.y = gY - pH; // Spawn grounded flush on the floor (218)
+    if (lessonIdRef.current === 'move') {
+      stateRef.current.x = 60;
+      stateRef.current.y = 60;
+      stateRef.current.onGround = false;
+    } else if (lessonIdRef.current === 'gravity-1') {
+      stateRef.current.x = 60;
+      stateRef.current.y = 30; // High in the air to demonstrate free fall
+      stateRef.current.onGround = false;
+    } else if (lessonIdRef.current === 'gravity-2') {
+      stateRef.current.x = 60;
+      stateRef.current.y = 40; // Mid-air to demonstrate landing on the floor
+      stateRef.current.onGround = false;
+    } else {
+      stateRef.current.x = 40;
+      stateRef.current.y = gY - pH; // Spawn grounded flush on the floor (218)
+      stateRef.current.onGround = true;
+    }
     stateRef.current.vx = 0;
     stateRef.current.vy = 0;
     stateRef.current.width = 22;
     stateRef.current.height = 22;
-    stateRef.current.onGround = true;
     stateRef.current.enemyX = 400;
     stateRef.current.enemyY = 70;
     stateRef.current.enemyRadius = 10;
@@ -325,117 +344,120 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Draw Ground (Driven dynamically by world.groundY)
-      const groundY = typeof world.groundY === 'number' ? world.groundY : 240;
-      ctx.strokeStyle = '#252B3B';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, groundY + 0.5);
-      ctx.lineTo(worldW, groundY + 0.5);
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(37, 43, 59, 0.2)';
-      ctx.fillRect(0, groundY, worldW, worldH - groundY);
-
-      // Draw Visual Coordinate Axis Widget (Origin & Direction Indicators)
-      const axisOriginX = 24;
-      ctx.save();
-      if (coordModeRef.current === 'math') {
-        // Math / Cartesian mode: Origin is at ground level, +Y points UP
-        const axisOriginY = groundY;
-
-        ctx.strokeStyle = 'rgba(79, 209, 197, 0.65)';
-        ctx.fillStyle = '#4FD1C5';
-        ctx.lineWidth = 1.5;
-
-        // Vertical +Y Axis (Pointing UP from ground)
+      // Draw Ground (Driven dynamically by world.groundY - only for lessons with ground physics)
+      const hasGround = !['move', 'gravity-1'].includes(lessonId) && typeof world.groundY === 'number' && world.groundY > 0;
+      if (hasGround) {
+        const groundY = world.groundY;
+        ctx.strokeStyle = '#252B3B';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(axisOriginX, axisOriginY);
-        ctx.lineTo(axisOriginX, axisOriginY - 55);
+        ctx.moveTo(0, groundY + 0.5);
+        ctx.lineTo(worldW, groundY + 0.5);
         ctx.stroke();
 
-        // Arrow head UP
-        ctx.beginPath();
-        ctx.moveTo(axisOriginX - 3.5, axisOriginY - 48);
-        ctx.lineTo(axisOriginX, axisOriginY - 57);
-        ctx.lineTo(axisOriginX + 3.5, axisOriginY - 48);
-        ctx.stroke();
+        ctx.fillStyle = 'rgba(37, 43, 59, 0.2)';
+        ctx.fillRect(0, groundY, worldW, worldH - groundY);
 
-        // Label +Y UP
-        ctx.font = 'bold 9px "JetBrains Mono", monospace';
-        ctx.fillText('+Y (UP)', axisOriginX + 6, axisOriginY - 48);
+        // Draw Visual Coordinate Axis Widget (Origin & Direction Indicators)
+        const axisOriginX = 24;
+        ctx.save();
+        if (coordModeRef.current === 'math') {
+          // Math / Cartesian mode: Origin is at ground level, +Y points UP
+          const axisOriginY = groundY;
 
-        // Horizontal +X Axis (Pointing RIGHT along ground)
-        ctx.beginPath();
-        ctx.moveTo(axisOriginX, axisOriginY);
-        ctx.lineTo(axisOriginX + 55, axisOriginY);
-        ctx.stroke();
+          ctx.strokeStyle = 'rgba(79, 209, 197, 0.65)';
+          ctx.fillStyle = '#4FD1C5';
+          ctx.lineWidth = 1.5;
 
-        // Arrow head RIGHT
-        ctx.beginPath();
-        ctx.moveTo(axisOriginX + 48, axisOriginY - 3.5);
-        ctx.lineTo(axisOriginX + 57, axisOriginY);
-        ctx.lineTo(axisOriginX + 48, axisOriginY + 3.5);
-        ctx.stroke();
+          // Vertical +Y Axis (Pointing UP from ground)
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX, axisOriginY);
+          ctx.lineTo(axisOriginX, axisOriginY - 55);
+          ctx.stroke();
 
-        // Label +X RIGHT
-        ctx.fillText('+X', axisOriginX + 48, axisOriginY - 5);
+          // Arrow head UP
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX - 3.5, axisOriginY - 48);
+          ctx.lineTo(axisOriginX, axisOriginY - 57);
+          ctx.lineTo(axisOriginX + 3.5, axisOriginY - 48);
+          ctx.stroke();
 
-        // Origin circle (0,0) at Ground
-        ctx.beginPath();
-        ctx.arc(axisOriginX, axisOriginY, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.font = 'bold 8px "JetBrains Mono", monospace';
-        ctx.fillText('(0,0) GROUND', axisOriginX + 6, axisOriginY + 11);
-      } else {
-        // Screen / Raster mode: Origin is at top-left roof, +Y points DOWN
-        const axisOriginY = 18;
+          // Label +Y UP
+          ctx.font = 'bold 9px "JetBrains Mono", monospace';
+          ctx.fillText('+Y (UP)', axisOriginX + 6, axisOriginY - 48);
 
-        ctx.strokeStyle = 'rgba(240, 169, 78, 0.65)';
-        ctx.fillStyle = '#F0A94E';
-        ctx.lineWidth = 1.5;
+          // Horizontal +X Axis (Pointing RIGHT along ground)
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX, axisOriginY);
+          ctx.lineTo(axisOriginX + 55, axisOriginY);
+          ctx.stroke();
 
-        // Vertical +Y Axis (Pointing DOWN from roof)
-        ctx.beginPath();
-        ctx.moveTo(axisOriginX, axisOriginY);
-        ctx.lineTo(axisOriginX, axisOriginY + 50);
-        ctx.stroke();
+          // Arrow head RIGHT
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX + 48, axisOriginY - 3.5);
+          ctx.lineTo(axisOriginX + 57, axisOriginY);
+          ctx.lineTo(axisOriginX + 48, axisOriginY + 3.5);
+          ctx.stroke();
 
-        // Arrow head DOWN
-        ctx.beginPath();
-        ctx.moveTo(axisOriginX - 3.5, axisOriginY + 44);
-        ctx.lineTo(axisOriginX, axisOriginY + 52);
-        ctx.lineTo(axisOriginX + 3.5, axisOriginY + 44);
-        ctx.stroke();
+          // Label +X RIGHT
+          ctx.fillText('+X', axisOriginX + 48, axisOriginY - 5);
 
-        // Label +Y DOWN
-        ctx.font = 'bold 9px "JetBrains Mono", monospace';
-        ctx.fillText('+Y (DOWN)', axisOriginX + 6, axisOriginY + 48);
+          // Origin circle (0,0) at Ground
+          ctx.beginPath();
+          ctx.arc(axisOriginX, axisOriginY, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.font = 'bold 8px "JetBrains Mono", monospace';
+          ctx.fillText('(0,0) GROUND', axisOriginX + 6, axisOriginY + 11);
+        } else {
+          // Screen / Raster mode: Origin is at top-left roof, +Y points DOWN
+          const axisOriginY = 18;
 
-        // Horizontal +X Axis (Pointing RIGHT along roof)
-        ctx.beginPath();
-        ctx.moveTo(axisOriginX, axisOriginY);
-        ctx.lineTo(axisOriginX + 50, axisOriginY);
-        ctx.stroke();
+          ctx.strokeStyle = 'rgba(240, 169, 78, 0.65)';
+          ctx.fillStyle = '#F0A94E';
+          ctx.lineWidth = 1.5;
 
-        // Arrow head RIGHT
-        ctx.beginPath();
-        ctx.moveTo(axisOriginX + 44, axisOriginY - 3.5);
-        ctx.lineTo(axisOriginX + 52, axisOriginY);
-        ctx.lineTo(axisOriginX + 44, axisOriginY + 3.5);
-        ctx.stroke();
+          // Vertical +Y Axis (Pointing DOWN from roof)
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX, axisOriginY);
+          ctx.lineTo(axisOriginX, axisOriginY + 50);
+          ctx.stroke();
 
-        // Label +X
-        ctx.fillText('+X', axisOriginX + 45, axisOriginY - 4);
+          // Arrow head DOWN
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX - 3.5, axisOriginY + 44);
+          ctx.lineTo(axisOriginX, axisOriginY + 52);
+          ctx.lineTo(axisOriginX + 3.5, axisOriginY + 44);
+          ctx.stroke();
 
-        // Origin circle (0,0) at Roof
-        ctx.beginPath();
-        ctx.arc(axisOriginX, axisOriginY, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.font = 'bold 8px "JetBrains Mono", monospace';
-        ctx.fillText('(0,0) ROOF', axisOriginX + 6, axisOriginY + 11);
+          // Label +Y DOWN
+          ctx.font = 'bold 9px "JetBrains Mono", monospace';
+          ctx.fillText('+Y (DOWN)', axisOriginX + 6, axisOriginY + 48);
+
+          // Horizontal +X Axis (Pointing RIGHT along roof)
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX, axisOriginY);
+          ctx.lineTo(axisOriginX + 50, axisOriginY);
+          ctx.stroke();
+
+          // Arrow head RIGHT
+          ctx.beginPath();
+          ctx.moveTo(axisOriginX + 44, axisOriginY - 3.5);
+          ctx.lineTo(axisOriginX + 52, axisOriginY);
+          ctx.lineTo(axisOriginX + 44, axisOriginY + 3.5);
+          ctx.stroke();
+
+          // Label +X
+          ctx.fillText('+X', axisOriginX + 45, axisOriginY - 4);
+
+          // Origin circle (0,0) at Roof
+          ctx.beginPath();
+          ctx.arc(axisOriginX, axisOriginY, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.font = 'bold 8px "JetBrains Mono", monospace';
+          ctx.fillText('(0,0) ROOF', axisOriginX + 6, axisOriginY + 11);
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       // Draw Platform (Collision Box: Driven dynamically by world.platform)
       const p = world.platform;
@@ -662,40 +684,44 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           <span>simulation canvas</span>
         </div>
 
-        {/* Coordinate Mode Toggle (Math Cartesian vs Screen Raster) */}
-        <div className="canvas-header-controls">
-          <div className="coord-mode-selector">
+        {/* Coordinate Mode Toggle (Math Cartesian vs Screen Raster) - only when ground physics is used */}
+        {!['move', 'gravity-1'].includes(lessonId) && (
+          <div className="canvas-header-controls">
+            <div className="coord-mode-selector">
+              <button
+                type="button"
+                className={`coord-btn ${coordMode === 'math' ? 'active' : ''}`}
+                onClick={() => setCoordMode('math')}
+                title="Cartesian Math Mode: Ground = 0, +Y is UP"
+              >
+                📐 Math (+Y Up)
+              </button>
+              <button
+                type="button"
+                className={`coord-btn ${coordMode === 'screen' ? 'active' : ''}`}
+                onClick={() => setCoordMode('screen')}
+                title="Screen / Raster Mode: Roof = 0, +Y is DOWN"
+              >
+                🖥️ Screen (+Y Down)
+              </button>
+            </div>
             <button
               type="button"
-              className={`coord-btn ${coordMode === 'math' ? 'active' : ''}`}
-              onClick={() => setCoordMode('math')}
-              title="Cartesian Math Mode: Ground = 0, +Y is UP"
+              className="coord-info-btn"
+              onClick={() => setShowCoordExplainer(prev => !prev)}
+              title="Learn why 2D graphics traditionally use Roof = 0"
             >
-              📐 Math (+Y Up)
-            </button>
-            <button
-              type="button"
-              className={`coord-btn ${coordMode === 'screen' ? 'active' : ''}`}
-              onClick={() => setCoordMode('screen')}
-              title="Screen / Raster Mode: Roof = 0, +Y is DOWN"
-            >
-              🖥️ Screen (+Y Down)
+              ?
             </button>
           </div>
-          <button
-            type="button"
-            className="coord-info-btn"
-            onClick={() => setShowCoordExplainer(prev => !prev)}
-            title="Learn why 2D graphics traditionally use Roof = 0"
-          >
-            ?
-          </button>
-        </div>
+        )}
 
         <div className="keys-hint">
           <span className="key">← → ↑ ↓</span>
           <span className="key">WASD</span>
-          <span className="key">Space: Jump</span>
+          {['gravity-3', 'gravity-4', 'collision', 'chase', 'capstone'].includes(lessonId) && (
+            <span className="key">Space: Jump</span>
+          )}
         </div>
       </div>
 
@@ -753,9 +779,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           </span>
           <span>
             y <b className="val-teal">{readout.y}</b>{' '}
-            <span style={{ fontSize: '10px', opacity: 0.7 }}>
-              {coordMode === 'math' ? '(altitude ↑)' : '(screen ↓)'}
-            </span>
+            {!['move', 'gravity-1'].includes(lessonId) && (
+              <span style={{ fontSize: '10px', opacity: 0.7 }}>
+                {coordMode === 'math' ? '(altitude ↑)' : '(screen ↓)'}
+              </span>
+            )}
           </span>
           <span>
             vx <b className="val-teal">{readout.vx}</b>

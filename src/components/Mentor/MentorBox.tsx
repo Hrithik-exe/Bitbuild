@@ -6,9 +6,23 @@ import { blipAudio } from '../../services/BlipAudio';
 interface MentorBoxProps {
   dialogueLines: DialogueLine[];
   onTrigger?: string;
+  onNextLesson?: () => void;
+  onPrevLesson?: () => void;
+  hasNextLesson?: boolean;
+  hasPrevLesson?: boolean;
+  nextLessonLabel?: string;
+  prevLessonLabel?: string;
 }
 
-export const MentorBox: React.FC<MentorBoxProps> = ({ dialogueLines }) => {
+export const MentorBox: React.FC<MentorBoxProps> = ({
+  dialogueLines,
+  onNextLesson,
+  onPrevLesson,
+  hasNextLesson = false,
+  hasPrevLesson = false,
+  nextLessonLabel = '',
+  prevLessonLabel = ''
+}) => {
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -76,16 +90,28 @@ export const MentorBox: React.FC<MentorBoxProps> = ({ dialogueLines }) => {
         </p>
       </div>
 
-      {dialogueLines.length > 1 && (
-        <div className="mentor-footer">
-          <span className="dialogue-counter">
-            Line {currentLineIndex + 1} of {dialogueLines.length}
-          </span>
-          <button className="btn-next-dialogue" onClick={nextDialogue}>
-            Next Tip →
-          </button>
+      <div className="mentor-footer">
+        <div className="mentor-tips-group">
+          {dialogueLines.length > 1 && (
+            <button className="btn-next-dialogue" onClick={nextDialogue}>
+              Next Tip ({currentLineIndex + 1}/{dialogueLines.length}) →
+            </button>
+          )}
         </div>
-      )}
+
+        <div className="mentor-step-nav">
+          {hasPrevLesson && (
+            <button className="btn-step-prev" onClick={onPrevLesson} title={`Previous: ${prevLessonLabel}`}>
+              ← {prevLessonLabel}
+            </button>
+          )}
+          {hasNextLesson && (
+            <button className="btn-step-next" onClick={onNextLesson} title={`Next: ${nextLessonLabel}`}>
+              Next Step: {nextLessonLabel} →
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

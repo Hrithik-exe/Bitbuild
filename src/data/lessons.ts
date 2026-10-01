@@ -11,8 +11,8 @@ export const chapters: Chapter[] = [
   {
     id: 'ch2',
     title: 'Chapter 2: Physics Engine Fundamentals',
-    description: 'Implement realistic gravity acceleration, jump impulses, and ground collision state.',
-    lessons: ['gravity'],
+    description: 'Implement realistic gravity acceleration, jump impulses, and ground collision state step-by-step.',
+    lessons: ['gravity-1', 'gravity-2', 'gravity-3', 'gravity-4'],
     capstoneId: 'capstone'
   },
   {
@@ -90,65 +90,249 @@ state.y = std::clamp(state.y, 0.0f, world.height - state.height);`
     }
   },
   {
-    id: 'gravity',
-    num: '02',
-    label: 'Gravity & Jump',
+    id: 'gravity-1',
+    num: '02.1',
+    label: 'Free Fall',
     chapter: 'ch2',
-    xp: 75,
+    xp: 30,
     note: {
-      title: 'Velocity, acceleration, and a jump',
+      title: 'Piece 1: Downward Acceleration',
       body: [
-        'Real motion is built from velocity (speed + direction) and acceleration (how velocity changes over time). Gravity is just a constant downward acceleration applied every frame: state.vy += gravity * dt.',
-        'A jump sets an upward vertical velocity instantly, then gravity pulls it back down. state.onGround is there so you can only jump when standing on something — try removing that check and see what happens.',
-        '📐 Why is jump impulse negative in code? Because 2D canvas coordinates place (0,0) at the roof and +Y downward, so moving UP means decreasing Y (-vy). Switch between "📐 Math (+Y Up)" and "🖥️ Screen (+Y Down)" in the canvas header to see how BitBuild translates this live!'
+        'Gravity is a constant acceleration pulling objects downward: every frame, state.vy += gravity * dt.',
+        'Watch the player accelerate downward from the air! Notice how short this code is — only 7 lines to simulate realistic free fall.'
       ]
     },
     mentorLines: [
-      { speaker: 'mentorA', text: 'Newton would be proud! Gravity constantly pulls velocity downward.', trigger: 'onEnter' },
-      { speaker: 'mentorB', text: 'Press UP arrow to jump! Watch out for infinite mid-air jumps if onGround is ignored.', trigger: 'onEnter' }
+      { speaker: 'mentorA', text: "Welcome to Gravity! Piece 1 is simple: constant downward acceleration.", trigger: 'onEnter' },
+      { speaker: 'mentorB', text: "Notice state.vy += gravity * dt? Every second, your vertical speed grows by 800 pixels!", trigger: 'onEnter' }
     ],
     code: {
-      javascript: `// Floor line is at y = 240. Since player is 22px tall, standing on floor puts top-left y = 240 - 22 = 218.
-world.groundY = 240;
+      javascript: `// 1. Gravity accelerates vertical velocity downward
+const gravity = 800; // pixels per second squared
 
-const gravity = 800;    // downward acceleration (px/s^2)
-const jumpPower = 380;  // initial upward impulse
-const moveSpeed = 160;
-
-if (keys.left) state.vx = -moveSpeed;
-else if (keys.right) state.vx = moveSpeed;
-else state.vx = 0;
-
-// Apply constant gravitational acceleration
 state.vy += gravity * dt;
+state.y += state.vy * dt;
 
-// Trigger jump only when grounded
+// Stop at canvas bottom
+if (state.y > world.height - state.height) {
+  state.y = world.height - state.height;
+  state.vy = 0;
+}`,
+      python: `# 1. Downward gravitational acceleration
+gravity = 800.0
+
+state['vy'] += gravity * dt
+state['y'] += state['vy'] * dt
+
+if state['y'] > world['height'] - state['height']:
+    state['y'] = world['height'] - state['height']
+    state['vy'] = 0.0`,
+      cpp: `// 1. Downward gravitational acceleration
+float gravity = 800.0f;
+
+state.vy += gravity * dt;
+state.y += state.vy * dt;
+
+if (state.y > world.height - state.height) {
+  state.y = world.height - state.height;
+  state.vy = 0.0f;
+}`
+    }
+  },
+  {
+    id: 'gravity-2',
+    num: '02.2',
+    label: 'The Floor',
+    chapter: 'ch2',
+    xp: 35,
+    note: {
+      title: 'Piece 2: Ground Landing',
+      body: [
+        'Now we introduce the floor: world.groundY = 240. Because player coordinates start at top-left, the player lands when state.y >= groundY - state.height (240 - 22 = 218).',
+        'When landing, set state.vy = 0 and state.onGround = true.'
+      ]
+    },
+    mentorLines: [
+      { speaker: 'mentorA', text: "Piece 2: The Floor! Look at world.groundY = 240 in your code.", trigger: 'onEnter' },
+      { speaker: 'mentorB', text: "When touching the floor, clamp state.y and set onGround = true so we know we landed!", trigger: 'onEnter' }
+    ],
+    code: {
+      javascript: `// 2. Define the floor height and land safely
+world.groundY = 240;
+const gravity = 800;
+
+state.vy += gravity * dt;
+state.y += state.vy * dt;
+
+// Landing check: floor line minus player height (240 - 22 = 218)
+const floorY = world.groundY - state.height;
+if (state.y >= floorY) {
+  state.y = floorY;
+  state.vy = 0;
+  state.onGround = true;
+}`,
+      python: `# 2. Define floor height and land safely
+world['groundY'] = 240
+gravity = 800.0
+
+state['vy'] += gravity * dt
+state['y'] += state['vy'] * dt
+
+floor_y = world['groundY'] - state['height']
+if state['y'] >= floor_y:
+    state['y'] = floor_y
+    state['vy'] = 0.0
+    state['onGround'] = True`,
+      cpp: `// 2. Define floor height and land safely
+world.groundY = 240.0f;
+float gravity = 800.0f;
+
+state.vy += gravity * dt;
+state.y += state.vy * dt;
+
+float floorY = world.groundY - state.height;
+if (state.y >= floorY) {
+  state.y = floorY;
+  state.vy = 0.0f;
+  state.onGround = true;
+}`
+    }
+  },
+  {
+    id: 'gravity-3',
+    num: '02.3',
+    label: 'The Jump',
+    chapter: 'ch2',
+    xp: 40,
+    note: {
+      title: 'Piece 3: Upward Jump Impulse',
+      body: [
+        'A jump is an instant upward impulse: state.vy = -jumpPower. In 2D screen coordinates, negative velocity moves UP towards the roof!',
+        'The state.onGround check ensures you can only jump when standing on the floor, preventing infinite mid-air flapping.'
+      ]
+    },
+    mentorLines: [
+      { speaker: 'mentorA', text: "Piece 3: Time to jump! Press [UP] or [SPACE] to launch into the air.", trigger: 'onEnter' },
+      { speaker: 'mentorB', text: "Notice state.vy = -jumpPower? Negative Y moves UP towards the ceiling!", trigger: 'onEnter' }
+    ],
+    code: {
+      javascript: `// 3. Upward jump impulse when standing on the ground
+world.groundY = 240;
+const gravity = 800;
+const jumpPower = 380;
+
+// Jump impulse (negative Y moves UP)
 if (keys.up && state.onGround) {
   state.vy = -jumpPower;
   state.onGround = false;
 }
 
+state.vy += gravity * dt;
+state.y += state.vy * dt;
+
+const floorY = world.groundY - state.height;
+if (state.y >= floorY) {
+  state.y = floorY;
+  state.vy = 0;
+  state.onGround = true;
+} else {
+  state.onGround = false;
+}`,
+      python: `# 3. Upward jump impulse when on ground
+world['groundY'] = 240
+gravity = 800.0
+jump_power = 380.0
+
+if keys.up and state['onGround']:
+    state['vy'] = -jump_power
+    state['onGround'] = False
+
+state['vy'] += gravity * dt
+state['y'] += state['vy'] * dt
+
+floor_y = world['groundY'] - state['height']
+if state['y'] >= floor_y:
+    state['y'] = floor_y
+    state['vy'] = 0.0
+    state['onGround'] = True
+else:
+    state['onGround'] = False`,
+      cpp: `// 3. Upward jump impulse when on ground
+world.groundY = 240.0f;
+float gravity = 800.0f;
+float jumpPower = 380.0f;
+
+if (keys.up && state.onGround) {
+  state.vy = -jumpPower;
+  state.onGround = false;
+}
+
+state.vy += gravity * dt;
+state.y += state.vy * dt;
+
+float floorY = world.groundY - state.height;
+if (state.y >= floorY) {
+  state.y = floorY;
+  state.vy = 0.0f;
+  state.onGround = true;
+} else {
+  state.onGround = false;
+}`
+    }
+  },
+  {
+    id: 'gravity-4',
+    num: '02.4',
+    label: 'Run & Jump',
+    chapter: 'ch2',
+    xp: 50,
+    note: {
+      title: 'Piece 4: Full Platformer Physics',
+      body: [
+        'Now combine everything: horizontal running (vx) with vertical jumping (vy) and wall boundary clipping.',
+        'Congratulations! You just built a full platformer physics engine from scratch, piece by piece!'
+      ]
+    },
+    mentorLines: [
+      { speaker: 'mentorA', text: "Piece 4: Full Platformer Physics! Left, right, jump, gravity, and floor collision all together!", trigger: 'onEnter' },
+      { speaker: 'mentorB', text: "You assembled this piece-by-piece without drowning in a huge wall of code. Try running and jumping around!", trigger: 'onEnter' }
+    ],
+    code: {
+      javascript: `// 4. Combine horizontal running with jumping
+world.groundY = 240;
+const moveSpeed = 160;
+const gravity = 800;
+const jumpPower = 380;
+
+if (keys.left) state.vx = -moveSpeed;
+else if (keys.right) state.vx = moveSpeed;
+else state.vx = 0;
+
+if (keys.up && state.onGround) {
+  state.vy = -jumpPower;
+  state.onGround = false;
+}
+
+state.vy += gravity * dt;
 state.x += state.vx * dt;
 state.y += state.vy * dt;
 
-// Ground landing check (ground level is 240 - 22 = 218)
-const groundY = world.groundY - state.height;
-if (state.y >= groundY) {
-  state.y = groundY;
+const floorY = world.groundY - state.height;
+if (state.y >= floorY) {
+  state.y = floorY;
   state.vy = 0;
   state.onGround = true;
 } else {
   state.onGround = false;
 }
 
+// Keep inside canvas walls
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
-      python: `# Python Gravity & Jump Implementation
-# Floor line is at 240 (standing on floor puts player top-left at 240 - 22 = 218)
+      python: `# 4. Combine horizontal running with jumping
 world['groundY'] = 240
-
+move_speed = 160.0
 gravity = 800.0
 jump_power = 380.0
-move_speed = 160.0
 
 if keys.left:
     state['vx'] = -move_speed
@@ -157,51 +341,52 @@ elif keys.right:
 else:
     state['vx'] = 0.0
 
-state['vy'] += gravity * dt
-
 if keys.up and state['onGround']:
     state['vy'] = -jump_power
     state['onGround'] = False
 
+state['vy'] += gravity * dt
 state['x'] += state['vx'] * dt
 state['y'] += state['vy'] * dt
 
-ground_y = world['groundY'] - state['height']
-if state['y'] >= ground_y:
-    state['y'] = ground_y
+floor_y = world['groundY'] - state['height']
+if state['y'] >= floor_y:
+    state['y'] = floor_y
     state['vy'] = 0.0
     state['onGround'] = True
 else:
     state['onGround'] = False
 
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))`,
-      cpp: `// C++ Physics Sandbox
-// Floor line is at 240 (standing on floor puts player top-left at 240 - 22 = 218)
+      cpp: `// 4. Combine horizontal running with jumping
 world.groundY = 240.0f;
-
+float moveSpeed = 160.0f;
 float gravity = 800.0f;
 float jumpPower = 380.0f;
-float moveSpeed = 160.0f;
 
 if (keys.left) state.vx = -moveSpeed;
 else if (keys.right) state.vx = moveSpeed;
 else state.vx = 0.0f;
 
-state.vy += gravity * dt;
 if (keys.up && state.onGround) {
   state.vy = -jumpPower;
   state.onGround = false;
 }
 
+state.vy += gravity * dt;
 state.x += state.vx * dt;
 state.y += state.vy * dt;
 
-float groundY = world.groundY - state.height;
-if (state.y >= groundY) {
-  state.y = groundY;
+float floorY = world.groundY - state.height;
+if (state.y >= floorY) {
+  state.y = floorY;
   state.vy = 0.0f;
   state.onGround = true;
-}`
+} else {
+  state.onGround = false;
+}
+
+state.x = std::clamp(state.x, 0.0f, world.width - state.width);`
     }
   },
   {
