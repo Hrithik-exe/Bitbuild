@@ -10,17 +10,6 @@ interface GameCanvasProps {
   onSuccess?: () => void;
 }
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  color: string;
-  life: number;
-  maxLife: number;
-  size: number;
-}
-
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   updateFn,
   statusMessage,
@@ -30,7 +19,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [readout, setReadout] = useState<ReadoutData>({ x: 0, y: 0, vx: 0, vy: 0, fps: 60 });
-  const particlesRef = useRef<Particle[]>([]);
 
   // Simulation State
   const stateRef = useRef<PlayerState>({
@@ -85,7 +73,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         { x: 410, y: 200, collected: false }
       ]
     };
-    particlesRef.current = [];
   }, [lessonId]);
 
   // Keyboard Event Listeners
@@ -140,6 +127,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   useEffect(() => {
     let rafId: number;
     let lastTime = 0;
+    let lastReadoutTime = 0;
     let fpsSmooth = 60;
     let isWon = false;
 
@@ -169,22 +157,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           );
         } catch {
           // Runtime error handled by parent status
-        }
-      }
-
-      // Add movement trail particles
-      if (Math.abs(state.vx) > 10 || Math.abs(state.vy) > 10) {
-        if (Math.random() < 0.3) {
-          particlesRef.current.push({
-            x: state.x + state.width / 2,
-            y: state.y + state.height / 2,
-            vx: (Math.random() - 0.5) * 20,
-            vy: (Math.random() - 0.5) * 20,
-            color: 'rgba(240, 169, 78, 0.4)',
-            life: 1,
-            maxLife: 0.3,
-            size: Math.random() * 3 + 2
-          });
         }
       }
 
@@ -282,20 +254,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.shadowBlur = 0;
       }
 
-      // Draw Particles
-      particlesRef.current.forEach((p, idx) => {
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.life -= dt;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
-        ctx.fill();
-        if (p.life <= 0) {
-          particlesRef.current.splice(idx, 1);
-        }
-      });
-
       // Draw Player Square
       ctx.fillStyle = '#F0A94E';
       ctx.shadowColor = 'rgba(240, 169, 78, 0.6)';
@@ -303,14 +261,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillRect(state.x, state.y, state.width, state.height);
       ctx.shadowBlur = 0;
 
-      // Update Readouts state
-      setReadout({
-        x: Math.round(state.x),
-        y: Math.round(state.y),
-        vx: Math.round(state.vx || 0),
-        vy: Math.round(state.vy || 0),
-        fps: Math.round(fpsSmooth)
-      });
+      // Update Readouts state (throttled at 10Hz to prevent React re-render stutter)
+      if (timestamp - lastReadoutTime > 100) {
+        lastReadoutTime = timestamp;
+        setReadout({
+          x: Math.round(state.x),
+          y: Math.round(state.y),
+          vx: Math.round(state.vx || 0),
+          vy: Math.round(state.vy || 0),
+          fps: Math.round(fpsSmooth)
+        });
+      }
     };
 
     rafId = requestAnimationFrame(loop);
