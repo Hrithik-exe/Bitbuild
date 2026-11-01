@@ -7,7 +7,7 @@ import { createWorld } from './world';
 import type { World } from './world';
 import { createStory } from './story';
 import { JOURNEY_SPAN, usePrefersReducedMotion, useStoryScroll } from './useStoryScroll';
-import { ArrowIcon, MenuIcon, SoundIcon, Wordmark } from './brand';
+import { ArrowIcon, MenuIcon, Wordmark } from './brand';
 import { Playground } from './Playground';
 import { JourneyOverlay } from './Journey';
 import { lessons } from '../data/lessons';
@@ -50,7 +50,6 @@ export function Home() {
   const [ready, setReady] = useState(false);
   const [progress, setProgress] = useState(0.04);
   const [noGL, setNoGL] = useState(false);
-  const [sound, setSound] = useState(false);
   const [menu, setMenu] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -149,22 +148,6 @@ export function Home() {
     };
   }, [ready, reduced, story]);
 
-  /* a quiet blip when the chapter changes, only if the visitor turned sound on */
-  const lastActive = useRef(0);
-  useEffect(() => {
-    if (view.active !== lastActive.current) {
-      lastActive.current = view.active;
-      if (sound) blipAudio.playBlip();
-    }
-  }, [view.active, sound]);
-
-  const toggleSound = () => {
-    const next = !sound;
-    setSound(next);
-    blipAudio.setMuted(!next);
-    if (next) blipAudio.playBlip();
-  };
-
   const goTo = useCallback(
     (i: number) => {
       setMenu(false);
@@ -200,10 +183,8 @@ export function Home() {
   /* Strictly gated entry: users cannot enter without logging in */
   const handleEnterApp = () => {
     if (user || authService.getToken()) {
-      if (sound) blipAudio.playSuccessTone();
       navigate('/app');
     } else {
-      if (sound) blipAudio.playBlip();
       setAuthMode('login');
       setAuthOpen(true);
       setMenu(false);
@@ -213,7 +194,6 @@ export function Home() {
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
     setAuthOpen(false);
-    if (sound) blipAudio.playSuccessTone();
     // Seamless entrance right after authenticating
     navigate('/app');
   };
@@ -290,9 +270,6 @@ export function Home() {
               SIGN IN
             </button>
           )}
-          <button type="button" className="bb-icon-btn" onClick={toggleSound} aria-pressed={sound} aria-label={sound ? 'Turn sound off' : 'Turn sound on'}>
-            <SoundIcon on={sound} />
-          </button>
           <button type="button" className="bb-btn bb-btn--small bb-nav-cta" onClick={handleEnterApp}>
             ENTER BITBUILD
           </button>
