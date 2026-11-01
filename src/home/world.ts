@@ -765,7 +765,7 @@ export function createWorld(opts: WorldOptions): World | null {
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
     T += dt * speed;
-    const follow = reduced ? 1 : Math.min(1, dt * 5.5);
+    const follow = reduced ? 1 : Math.min(1, dt * 9.0);
     ps += (story.p - ps) * follow;
     js += (story.j - js) * follow;
     ideaS += (story.idea - ideaS) * follow;
