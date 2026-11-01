@@ -26,6 +26,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setError(null);
+      setSuccessMsg(null);
+    }
+  }, [isOpen, initialMode]);
+
+  const fillDemoAccount = () => {
+    setMode('login');
+    setUsername('demo_user');
+    setPassword('password123');
+    setError(null);
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,6 +138,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
+          {mode === 'login' && (
+            <div style={{ background: 'rgba(34, 211, 238, 0.08)', border: '1px solid rgba(34, 211, 238, 0.25)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontFamily: "'JetBrains Mono', monospace" }}>
+              <div>
+                <span style={{ color: '#4FD1C5', fontWeight: 600 }}>Demo Login:</span> <span style={{ color: '#E2E8F0' }}>demo_user / password123</span>
+              </div>
+              <button
+                type="button"
+                onClick={fillDemoAccount}
+                style={{ background: 'rgba(34, 211, 238, 0.2)', border: '1px solid #4FD1C5', color: '#4FD1C5', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Auto-Fill
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="auth-alert error-alert">
               <AlertCircle size={15} />

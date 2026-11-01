@@ -13,6 +13,15 @@ function localApiPlugin(): Plugin {
           next();
         }
       });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url && req.url.startsWith('/api')) {
+          await handleApiRequest(req, res);
+        } else {
+          next();
+        }
+      });
     }
   };
 }
