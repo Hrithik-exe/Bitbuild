@@ -125,8 +125,8 @@ state.y = std::clamp(state.y, 0.0f, world.height - state.height);`
     note: {
       title: 'Physics Engine Fundamentals',
       body: [
-        'Real motion is built from velocity and acceleration. Instead of facing a daunting 40-line physics script all at once, you will assemble gravity, the floor, jumping, and running piece by piece!',
-        'Click "Next Piece →" in the mentor box below to progress through each stage.'
+        'Real motion is built from velocity and acceleration. Instead of one daunting physics script, you will complete four short missions: free fall, the floor, the jump, and running. Each one has tasks for you to write.',
+        'Win a mission to earn its XP, then use the Next button in the mentor box to move on.'
       ]
     },
     mentorLines: [
@@ -171,43 +171,66 @@ if (state.y > world.height - state.height) {
         num: 'Piece 1',
         label: 'Free Fall',
         note: {
-          title: 'Piece 1: Downward Acceleration',
+          title: 'Mission 2.1: Free Fall',
           body: [
-            'Gravity is a constant acceleration pulling objects downward: every frame, state.vy += gravity * dt.',
-            'Watch the player accelerate downward from the air! Notice how short this code is — only 7 lines to simulate realistic free fall.'
+            'Your goal: make the player fall and land on the LAND HERE pad at the bottom. The checklist at the top of the canvas ticks off as your code works.',
+            'Gravity is an acceleration, so it changes velocity, and velocity changes position. Every frame: <code class="inline">state.vy += gravity * dt</code>, then <code class="inline">state.y += state.vy * dt</code>.',
+            'On a game screen y grows DOWNWARD, so a positive vy means falling. The code that stops the player at the bottom is done for you.'
           ]
         },
         mentorLines: [
-          { speaker: 'mentorA', text: "Welcome to Level 2, Piece 1! Let's start with pure downward gravitational acceleration.", trigger: 'onEnter' },
-          { speaker: 'mentorB', text: "Notice state.vy += gravity * dt? Every second, your downward speed grows by 800 pixels!", trigger: 'onEnter' }
+          { speaker: 'mentorA', text: 'Piece 1: Free Fall! Your mission: make the player fall onto the LAND HERE pad.', trigger: 'onEnter' },
+          { speaker: 'mentorB', text: "Gravity doesn't move you directly. It changes your velocity. Which variable holds vertical velocity?", trigger: 'onEnter' },
+          { speaker: 'mentorA', text: 'Task 1: add gravity * dt to state.vy. Task 2: add state.vy * dt to state.y. Always multiply by dt!' },
+          { speaker: 'mentorB', text: "Nothing happens? Check the status bar under the canvas for errors, or press 'Explain My Bug' at the top." }
         ],
         code: {
-          javascript: `// 1. Gravity accelerates vertical velocity downward
+          javascript: `// MISSION: make the player fall and land on the pad below.
+// The floor clamp at the bottom is done for you.
 const gravity = 800; // pixels per second squared
 
-state.vy += gravity * dt;
-state.y += state.vy * dt;
+// TASK 1: gravity speeds you up.
+// Add gravity * dt to state.vy.
 
-// Stop at canvas bottom
+
+// TASK 2: velocity moves you.
+// Add state.vy * dt to state.y.
+
+
+// Stop at canvas bottom (done for you)
 if (state.y > world.height - state.height) {
   state.y = world.height - state.height;
   state.vy = 0;
 }`,
-          python: `# 1. Downward gravitational acceleration
-gravity = 800.0
+          python: `# MISSION: make the player fall and land on the pad below.
+# The floor clamp at the bottom is done for you.
+gravity = 800.0  # pixels per second squared
 
-state['vy'] += gravity * dt
-state['y'] += state['vy'] * dt
+# TASK 1: gravity speeds you up.
+# Add gravity * dt to state['vy'].
 
+
+# TASK 2: velocity moves you.
+# Add state['vy'] * dt to state['y'].
+
+
+# Stop at canvas bottom (done for you)
 if state['y'] > world['height'] - state['height']:
     state['y'] = world['height'] - state['height']
     state['vy'] = 0.0`,
-          cpp: `// 1. Downward gravitational acceleration
-float gravity = 800.0f;
+          cpp: `// MISSION: make the player fall and land on the pad below.
+// The floor clamp at the bottom is done for you.
+float gravity = 800.0f; // pixels per second squared
 
-state.vy += gravity * dt;
-state.y += state.vy * dt;
+// TASK 1: gravity speeds you up.
+// Add gravity * dt to state.vy.
 
+
+// TASK 2: velocity moves you.
+// Add state.vy * dt to state.y.
+
+
+// Stop at canvas bottom (done for you)
 if (state.y > world.height - state.height) {
   state.y = world.height - state.height;
   state.vy = 0.0f;
@@ -219,56 +242,74 @@ if (state.y > world.height - state.height) {
         num: 'Piece 2',
         label: 'The Floor',
         note: {
-          title: 'Piece 2: Ground Landing',
+          title: 'Mission 2.2: Build the Floor',
           body: [
-            'Now we introduce the floor: world.groundY = 240. Because player coordinates start at top-left, the player lands when state.y >= groundY - state.height (240 - 22 = 218).',
-            'When landing, set state.vy = 0 and state.onGround = true.'
+            'Your goal: land on the floor and stay there for half a second. Right now there is no floor in your code, so the player falls straight out of the world!',
+            'A player\'s position is its TOP edge. So the spot where it should stop is the floor line minus the player\'s height: <code class="inline">world.groundY - state.height</code>.',
+            'When you land: put the player on that spot, stop its fall (vy = 0), and set <code class="inline">state.onGround = true</code>. Piece 3 will use onGround to decide when you may jump.'
           ]
         },
         mentorLines: [
-          { speaker: 'mentorA', text: "Piece 2: The Floor! Look at world.groundY = 240 in your code.", trigger: 'onEnter' },
-          { speaker: 'mentorB', text: "When touching the floor, clamp state.y and set onGround = true so we know we landed!", trigger: 'onEnter' }
+          { speaker: 'mentorA', text: 'Piece 2: The Floor! Right now the player falls straight through the ground. Your mission: build the floor.', trigger: 'onEnter' },
+          { speaker: 'mentorB', text: "On screen, the player's position is its top edge. So the floor line minus the player's height tells us where it should stop." },
+          { speaker: 'mentorA', text: "That's floorY = world.groundY - state.height. When state.y reaches floorY, snap y to floorY and set vy to 0." },
+          { speaker: 'mentorB', text: 'Last task: set state.onGround = true when you land, and false when you are in the air.' }
         ],
         code: {
-          javascript: `// 2. Define the floor height and land safely
-world.groundY = 240;
+          javascript: `// MISSION: land on the floor and stay there.
 const gravity = 800;
 
+// Gravity (done for you). But there is no floor yet,
+// so the player falls forever!
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
-// Landing check: floor line minus player height (240 - 22 = 218)
-const floorY = world.groundY - state.height;
-if (state.y >= floorY) {
-  state.y = floorY;
-  state.vy = 0;
-  state.onGround = true;
-}`,
-          python: `# 2. Define floor height and land safely
-world['groundY'] = 240
+// TASK 1: where does the player stand? Make a variable called floorY
+// equal to world.groundY - state.height.
+
+
+// TASK 2: if state.y has reached floorY, put the player ON the floor
+// (state.y = floorY) and stop its fall (state.vy = 0).
+
+
+// TASK 3: set state.onGround = true when landed, otherwise false.
+`,
+          python: `# MISSION: land on the floor and stay there.
 gravity = 800.0
 
+# Gravity (done for you). But there is no floor yet,
+# so the player falls forever!
 state['vy'] += gravity * dt
 state['y'] += state['vy'] * dt
 
-floor_y = world['groundY'] - state['height']
-if state['y'] >= floor_y:
-    state['y'] = floor_y
-    state['vy'] = 0.0
-    state['onGround'] = True`,
-          cpp: `// 2. Define floor height and land safely
-world.groundY = 240.0f;
+# TASK 1: where does the player stand? Make a variable called floor_y
+# equal to world['groundY'] - state['height'].
+
+
+# TASK 2: if state['y'] has reached floor_y, put the player ON the floor
+# (state['y'] = floor_y) and stop its fall (state['vy'] = 0.0).
+
+
+# TASK 3: set state['onGround'] = True when landed, otherwise False.
+`,
+          cpp: `// MISSION: land on the floor and stay there.
 float gravity = 800.0f;
 
+// Gravity (done for you). But there is no floor yet,
+// so the player falls forever!
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
-float floorY = world.groundY - state.height;
-if (state.y >= floorY) {
-  state.y = floorY;
-  state.vy = 0.0f;
-  state.onGround = true;
-}`
+// TASK 1: where does the player stand? Make a variable called floorY
+// equal to world.groundY - state.height.
+
+
+// TASK 2: if state.y has reached floorY, put the player ON the floor
+// (state.y = floorY) and stop its fall (state.vy = 0.0f).
+
+
+// TASK 3: set state.onGround = true when landed, otherwise false.
+`
         }
       },
       {
@@ -276,28 +317,30 @@ if (state.y >= floorY) {
         num: 'Piece 3',
         label: 'The Jump',
         note: {
-          title: 'Piece 3: Upward Jump Impulse',
+          title: 'Mission 2.3: The Jump',
           body: [
-            'A jump is an instant upward impulse: state.vy = -jumpPower. In 2D screen coordinates, negative velocity moves UP towards the roof!',
-            'The state.onGround check ensures you can only jump when standing on the floor, preventing infinite mid-air flapping.'
+            'Your goal: jump high enough to grab the star above you. Press the Up arrow, W or Space to jump (click the canvas area first if keys do nothing).',
+            'A jump is just an instant upward velocity. On screen up is NEGATIVE y, so you set <code class="inline">state.vy = -jumpPower</code>. Gravity then slows it, stops it at the top, and pulls you back down.',
+            'Only jump when standing on the floor: check <code class="inline">state.onGround</code>, otherwise you could jump again in mid-air. Then tune jumpPower until the star is in reach: a bigger number jumps higher.'
           ]
         },
         mentorLines: [
-          { speaker: 'mentorA', text: "Piece 3: Time to jump! Press [UP] or [SPACE] to launch into the air.", trigger: 'onEnter' },
-          { speaker: 'mentorB', text: "Notice state.vy = -jumpPower? Negative Y moves UP towards the ceiling!", trigger: 'onEnter' }
+          { speaker: 'mentorA', text: 'Piece 3: The Jump! The star is above you. Can you reach it?', trigger: 'onEnter' },
+          { speaker: 'mentorB', text: 'Your jumpPower starts at 300. That is not enough. Try bigger numbers and watch how high you go.' },
+          { speaker: 'mentorA', text: 'Task 2: if keys.up and state.onGround, set state.vy = -jumpPower. Negative y is UP.' },
+          { speaker: 'mentorB', text: 'Also set state.onGround = false right after you jump, or you could jump again in mid-air!' }
         ],
         code: {
-          javascript: `// 3. Upward jump impulse when standing on the ground
-world.groundY = 240;
+          javascript: `// MISSION: jump high enough to grab the star.
 const gravity = 800;
-const jumpPower = 380;
+const jumpPower = 300; // TASK 1: tune this number until you reach the star
 
-// Jump impulse (negative Y moves UP)
-if (keys.up && state.onGround) {
-  state.vy = -jumpPower;
-  state.onGround = false;
-}
+// TASK 2: when keys.up is pressed AND the player is on the ground,
+// launch upward: state.vy = -jumpPower, and set state.onGround = false.
+// Hint: on screen, negative y is UP.
 
+
+// Gravity and floor (done for you)
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
@@ -309,15 +352,16 @@ if (state.y >= floorY) {
 } else {
   state.onGround = false;
 }`,
-          python: `# 3. Upward jump impulse when on ground
-world['groundY'] = 240
+          python: `# MISSION: jump high enough to grab the star.
 gravity = 800.0
-jump_power = 380.0
+jump_power = 300.0  # TASK 1: tune this number until you reach the star
 
-if keys.up and state['onGround']:
-    state['vy'] = -jump_power
-    state['onGround'] = False
+# TASK 2: when keys.up is pressed AND the player is on the ground,
+# launch upward: state['vy'] = -jump_power, and set state['onGround'] = False.
+# Hint: on screen, negative y is UP.
 
+
+# Gravity and floor (done for you)
 state['vy'] += gravity * dt
 state['y'] += state['vy'] * dt
 
@@ -328,16 +372,16 @@ if state['y'] >= floor_y:
     state['onGround'] = True
 else:
     state['onGround'] = False`,
-          cpp: `// 3. Upward jump impulse when on ground
-world.groundY = 240.0f;
+          cpp: `// MISSION: jump high enough to grab the star.
 float gravity = 800.0f;
-float jumpPower = 380.0f;
+float jumpPower = 300.0f; // TASK 1: tune this number until you reach the star
 
-if (keys.up && state.onGround) {
-  state.vy = -jumpPower;
-  state.onGround = false;
-}
+// TASK 2: when keys.up is pressed AND the player is on the ground,
+// launch upward: state.vy = -jumpPower, and set state.onGround = false.
+// Hint: on screen, negative y is UP.
 
+
+// Gravity and floor (done for you)
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
@@ -356,34 +400,42 @@ if (state.y >= floorY) {
         num: 'Piece 4',
         label: 'Run & Jump',
         note: {
-          title: 'Piece 4: Full Platformer Physics',
+          title: 'Mission 2.4: Run & Jump',
           body: [
-            'Now combine everything: horizontal running (vx) with vertical jumping (vy) and wall boundary clipping.',
-            'Congratulations! You just built a full platformer physics engine from scratch, piece by piece!'
+            'Your goal: collect both stars, then reach the EXIT on the right. Jumping, gravity and the floor are done for you. You write the running.',
+            'Running is velocity too, just sideways: set <code class="inline">state.vx</code> from the keys (negative is left, positive is right, 0 when no key is pressed), then move with <code class="inline">state.x += state.vx * dt</code>.',
+            'Because vx and vy are separate, you can run and jump at the same time. That is how you reach the high stars: jump early and let the arc carry you sideways. You just built a platformer engine piece by piece!'
           ]
         },
         mentorLines: [
-          { speaker: 'mentorA', text: "Piece 4: Full Platformer Physics! Left, right, jump, gravity, and floor collision all together!", trigger: 'onEnter' },
-          { speaker: 'mentorB', text: "You assembled this piece-by-piece without drowning in a huge wall of code. Try running and jumping around!", trigger: 'onEnter' }
+          { speaker: 'mentorA', text: 'Piece 4: Run & Jump! Collect both stars, then reach the EXIT. Jumping, gravity and the floor are done for you.', trigger: 'onEnter' },
+          { speaker: 'mentorB', text: 'Task 1: set state.vx to -moveSpeed for left, moveSpeed for right, and 0 when no key is pressed.' },
+          { speaker: 'mentorA', text: 'Task 2: state.x += state.vx * dt, just like y uses vy. Then run and jump together to reach the high stars.' },
+          { speaker: 'mentorB', text: 'Stars too high? Jump while running: the arc carries you sideways. Time your jump early.' }
         ],
         code: {
-          javascript: `// 4. Combine horizontal running with jumping
-world.groundY = 240;
+          javascript: `// MISSION: collect both stars, then reach the EXIT.
 const moveSpeed = 160;
 const gravity = 800;
 const jumpPower = 380;
 
-if (keys.left) state.vx = -moveSpeed;
-else if (keys.right) state.vx = moveSpeed;
-else state.vx = 0;
+// TASK 1: run left and right.
+// If keys.left is pressed, set state.vx = -moveSpeed.
+// Else if keys.right is pressed, set state.vx = moveSpeed.
+// Otherwise stop: state.vx = 0.
 
+
+// TASK 2: move sideways.
+// Add state.vx * dt to state.x.
+
+
+// Jump, gravity and floor (done for you)
 if (keys.up && state.onGround) {
   state.vy = -jumpPower;
   state.onGround = false;
 }
 
 state.vy += gravity * dt;
-state.x += state.vx * dt;
 state.y += state.vy * dt;
 
 const floorY = world.groundY - state.height;
@@ -395,27 +447,29 @@ if (state.y >= floorY) {
   state.onGround = false;
 }
 
-// Keep inside canvas walls
+// Keep inside canvas walls (done for you)
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
-          python: `# 4. Combine horizontal running with jumping
-world['groundY'] = 240
+          python: `# MISSION: collect both stars, then reach the EXIT.
 move_speed = 160.0
 gravity = 800.0
 jump_power = 380.0
 
-if keys.left:
-    state['vx'] = -move_speed
-elif keys.right:
-    state['vx'] = move_speed
-else:
-    state['vx'] = 0.0
+# TASK 1: run left and right.
+# If keys.left is pressed, set state['vx'] = -move_speed.
+# Else if keys.right is pressed, set state['vx'] = move_speed.
+# Otherwise stop: state['vx'] = 0.0.
 
+
+# TASK 2: move sideways.
+# Add state['vx'] * dt to state['x'].
+
+
+# Jump, gravity and floor (done for you)
 if keys.up and state['onGround']:
     state['vy'] = -jump_power
     state['onGround'] = False
 
 state['vy'] += gravity * dt
-state['x'] += state['vx'] * dt
 state['y'] += state['vy'] * dt
 
 floor_y = world['groundY'] - state['height']
@@ -426,24 +480,30 @@ if state['y'] >= floor_y:
 else:
     state['onGround'] = False
 
+# Keep inside canvas walls (done for you)
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))`,
-          cpp: `// 4. Combine horizontal running with jumping
-world.groundY = 240.0f;
+          cpp: `// MISSION: collect both stars, then reach the EXIT.
 float moveSpeed = 160.0f;
 float gravity = 800.0f;
 float jumpPower = 380.0f;
 
-if (keys.left) state.vx = -moveSpeed;
-else if (keys.right) state.vx = moveSpeed;
-else state.vx = 0.0f;
+// TASK 1: run left and right.
+// If keys.left is pressed, set state.vx = -moveSpeed.
+// Else if keys.right is pressed, set state.vx = moveSpeed.
+// Otherwise stop: state.vx = 0.0f.
 
+
+// TASK 2: move sideways.
+// Add state.vx * dt to state.x.
+
+
+// Jump, gravity and floor (done for you)
 if (keys.up && state.onGround) {
   state.vy = -jumpPower;
   state.onGround = false;
 }
 
 state.vy += gravity * dt;
-state.x += state.vx * dt;
 state.y += state.vy * dt;
 
 float floorY = world.groundY - state.height;
@@ -455,9 +515,11 @@ if (state.y >= floorY) {
   state.onGround = false;
 }
 
+// Keep inside canvas walls (done for you)
 state.x = std::clamp(state.x, 0.0f, world.width - state.width);`
         }
       }
+
     ]
   },
   {

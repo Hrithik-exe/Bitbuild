@@ -233,6 +233,19 @@ export function App() {
     }
   };
 
+  // Winning a middle piece of a multi-piece lesson earns that piece's +25 XP (once)
+  const handlePieceSuccess = () => {
+    if (activePiece && !completedPieceIds.includes(activePiece.id)) {
+      const updatedPieces = [...completedPieceIds, activePiece.id];
+      const updatedXp = currentXp + 25;
+      setCompletedPieceIds(updatedPieces);
+      setCurrentXp(updatedXp);
+      blipAudio.playSuccessTone();
+      setStatusMessage('Piece complete! +25 XP. Press Next to continue.');
+      persistState(updatedXp, completedLessonIds, updatedPieces, currentLesson.id);
+    }
+  };
+
   // Switch active lesson
   const loadLesson = useCallback((lesson: Lesson) => {
     setCurrentLesson(lesson);
@@ -427,7 +440,11 @@ export function App() {
               statusMessage={statusMessage}
               isError={isError}
               lessonId={activeSimId}
-              onSuccess={handleLessonSuccess}
+              onSuccess={
+                currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1
+                  ? handlePieceSuccess
+                  : handleLessonSuccess
+              }
             />
           </div>
 
