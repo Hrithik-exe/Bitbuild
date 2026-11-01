@@ -1,6 +1,7 @@
 import React from 'react';
-import { Volume2, VolumeX, Sparkles, Network, Code2, ShieldAlert } from 'lucide-react';
-import type { Language } from '../types/lesson';
+import { Link } from 'react-router-dom';
+import { Volume2, VolumeX, Sparkles, Network, Code2, ShieldAlert, User as UserIcon, LogOut, LogIn } from 'lucide-react';
+import type { Language, User } from '../types/lesson';
 
 interface HeaderProps {
   currentXp: number;
@@ -11,6 +12,9 @@ interface HeaderProps {
   isMuted: boolean;
   toggleMute: () => void;
   onExplainBug: () => void;
+  user: User | null;
+  onOpenAuth: () => void;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,17 +25,36 @@ export const Header: React.FC<HeaderProps> = ({
   setLanguage,
   isMuted,
   toggleMute,
-  onExplainBug
+  onExplainBug,
+  user,
+  onOpenAuth,
+  onLogout
 }) => {
   return (
     <header className="header-container">
       <div className="header-top">
-        <div className="eyebrow">
+        <Link to="/" className="eyebrow" style={{ textDecoration: 'none', cursor: 'pointer' }} title="Return to BITBUILD.EXE Homepage">
           <span className="live-dot" />
-          BITBUILD
-        </div>
+          BITBUILD.EXE
+        </Link>
 
         <div className="header-actions">
+          {/* User Account / Auth Section */}
+          {user ? (
+            <div className="user-account-badge">
+              <UserIcon size={13} className="user-icon" />
+              <span className="user-name">{user.username}</span>
+              <button className="btn-header-logout" onClick={onLogout} title="Log Out">
+                <LogOut size={12} />
+              </button>
+            </div>
+          ) : (
+            <button className="btn-header-signin" onClick={onOpenAuth} title="Sign In or Register for Persistent Cloud / SQLite Storage">
+              <LogIn size={13} />
+              <span>Sign In</span>
+            </button>
+          )}
+
           <div className="xp-badge">
             <Sparkles size={13} className="xp-icon" />
             <span>{currentXp} XP</span>

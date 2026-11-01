@@ -453,7 +453,7 @@ state.x = std::clamp(state.x, 0.0f, world.width - state.width);`
     code: {
       javascript: `// 1. Define the platform collision box: [x, y, width, height]
 // You have full control! Adjust these numbers to reposition or resize the platform box.
-world.platform = { x: 250, y: 145, w: 120, h: 20 };
+world.platform = { x: 250, y: 170, w: 120, h: 20 };
 // Floor line is at y = 240. With player height = 22, standing on the floor is at y = 240 - 22 = 218.
 world.groundY = 240;
 
@@ -518,7 +518,7 @@ state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
       python: `# Python Solid AABB Platform Collision
 # 1. Define the platform collision box: [x, y, width, height]
 # You have full control! Adjust these values to reposition or resize the box.
-world['platform'] = {'x': 250, 'y': 145, 'w': 120, 'h': 20}
+world['platform'] = {'x': 250, 'y': 170, 'w': 120, 'h': 20}
 world['groundY'] = 240
 
 speed = 160.0
@@ -578,7 +578,7 @@ if state['y'] >= ground_y:
       cpp: `// C++ Solid AABB Collision Resolution
 // 1. Define the platform collision box: [x, y, width, height]
 // You have full control! Adjust these values to reposition or resize the box.
-world.platform = { x: 250.0f, y: 145.0f, w: 120.0f, h: 20.0f };
+world.platform = { x: 250.0f, y: 170.0f, w: 120.0f, h: 20.0f };
 world.groundY = 240.0f;
 
 float speed = 160.0f;
@@ -756,7 +756,7 @@ if (dist > 0.001f) {
 // 1. GAME WORLD & LEVEL SETUP (Adjust anything to design!)
 // ========================================================
 world.groundY = 240;                                // Floor line height
-world.platform = { x: 240, y: 145, w: 120, h: 20 }; // Floating platform collision box [x, y, w, h]
+world.platform = { x: 240, y: 170, w: 120, h: 20 }; // Floating platform collision box [x, y, w, h]
 world.goal = { x: 416, y: 175, w: 38, h: 65 };       // Green portal exit [x, y, w, h]
 
 // Initialize the 3 energy gems across the arena
@@ -844,13 +844,41 @@ if (state.y >= groundY) {
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));
 
 // ========================================================
-// 6. ENEMY VECTOR CHASE AI
+// 6. ENEMY VECTOR CHASE AI (Steers Around Platform)
 // ========================================================
-const dx = state.x - state.enemyX;
-const dy = state.y - state.enemyY;
-const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-state.enemyX += (dx / dist) * enemySpeed * dt;
-state.enemyY += (dy / dist) * enemySpeed * dt;
+const edx = state.x - state.enemyX;
+const edy = state.y - state.enemyY;
+const edist = Math.sqrt(edx * edx + edy * edy) || 1;
+let evx = (edx / edist) * enemySpeed;
+let evy = (edy / edist) * enemySpeed;
+
+const er = 12;
+const p = world.platform;
+if (p) {
+  const nextX = state.enemyX + evx * dt;
+  const nextY = state.enemyY + evy * dt;
+  const bx1 = p.x - er, bx2 = p.x + p.w + er;
+  const by1 = p.y - er, by2 = p.y + p.h + er;
+
+  if (nextX > bx1 && nextX < bx2 && nextY > by1 && nextY < by2) {
+    if (state.enemyY <= by1) {
+      evy = 0;
+      evx = (state.x < p.x + p.w / 2) ? -enemySpeed : enemySpeed;
+    } else if (state.enemyY >= by2) {
+      evy = 0;
+      evx = (state.x < p.x + p.w / 2) ? -enemySpeed : enemySpeed;
+    } else if (state.enemyX <= bx1) {
+      evx = 0;
+      evy = (state.y < p.y + p.h / 2) ? -enemySpeed : enemySpeed;
+    } else {
+      evx = 0;
+      evy = (state.y < p.y + p.h / 2) ? -enemySpeed : enemySpeed;
+    }
+  }
+}
+
+state.enemyX += evx * dt;
+state.enemyY += evy * dt;
 
 // ========================================================
 // 7. GEM PICKUP RADIUS CHECK
@@ -872,7 +900,7 @@ if (state.coins) {
 # 1. GAME WORLD & LEVEL SETUP (Adjust anything to design!)
 # ========================================================
 world['groundY'] = 240
-world['platform'] = {'x': 240, 'y': 145, 'w': 120, 'h': 20}
+world['platform'] = {'x': 240, 'y': 170, 'w': 120, 'h': 20}
 world['goal'] = {'x': 416, 'y': 175, 'w': 38, 'h': 65}
 
 if not state.get('coins'):
@@ -954,13 +982,51 @@ if state['y'] >= ground_y:
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))
 
 # ========================================================
-# 6. ENEMY CHASE AI
+# 6. ENEMY CHASE AI (Steers Around Platform)
 # ========================================================
-dx = state['x'] - state['enemyX']
-dy = state['y'] - state['enemyY']
-dist = (dx * dx + dy * dy) ** 0.5 or 1.0
-state['enemyX'] += (dx / dist) * enemy_speed * dt
-state['enemyY'] += (dy / dist) * enemy_speed * dt
+edx = state['x'] - state['enemyX']
+edy = state['y'] - state['enemyY']
+edist = (edx * edx + edy * edy) ** 0.5 or 1.0
+evx = (edx / edist) * enemy_speed
+evy = (edy / edist) * enemy_speed
+
+er = 12.0
+if world.get('platform'):
+    p = world['platform']
+    next_x = state['enemyX'] + evx * dt
+    next_y = state['enemyY'] + evy * dt
+    bx1 = p['x'] - er
+    bx2 = p['x'] + p['w'] + er
+    by1 = p['y'] - er
+    by2 = p['y'] + p['h'] + er
+    if next_x > bx1 and next_x < bx2 and next_y > by1 and next_y < by2:
+        if state['enemyY'] <= by1:
+            evy = 0.0
+            if state['x'] < p['x'] + p['w'] / 2.0:
+                evx = -enemy_speed
+            else:
+                evx = enemy_speed
+        elif state['enemyY'] >= by2:
+            evy = 0.0
+            if state['x'] < p['x'] + p['w'] / 2.0:
+                evx = -enemy_speed
+            else:
+                evx = enemy_speed
+        elif state['enemyX'] <= bx1:
+            evx = 0.0
+            if state['y'] < p['y'] + p['h'] / 2.0:
+                evy = -enemy_speed
+            else:
+                evy = enemy_speed
+        else:
+            evx = 0.0
+            if state['y'] < p['y'] + p['h'] / 2.0:
+                evy = -enemy_speed
+            else:
+                evy = enemy_speed
+
+state['enemyX'] += evx * dt
+state['enemyY'] += evy * dt
 
 # ========================================================
 # 7. GEM PICKUP RADIUS CHECK
@@ -978,7 +1044,7 @@ if state.get('coins'):
 // 1. GAME WORLD & LEVEL SETUP (Adjust anything to design!)
 // ========================================================
 world.groundY = 240.0f;
-world.platform = { x: 240.0f, y: 145.0f, w: 120.0f, h: 20.0f };
+world.platform = { x: 240.0f, y: 170.0f, w: 120.0f, h: 20.0f };
 world.goal = { x: 416.0f, y: 175.0f, w: 38.0f, h: 65.0f };
 
 if (state.enemyX <= 0.0f) {
@@ -1054,15 +1120,40 @@ if (state.y >= groundY) {
 state.x = Math.max(0.0f, Math.min(world.width - state.width, state.x));
 
 // ========================================================
-// 6. ENEMY CHASE AI
+// 6. ENEMY CHASE AI (Steers Around Platform)
 // ========================================================
-float dx = state.x - state.enemyX;
-float dy = state.y - state.enemyY;
-float dist = std::sqrt(dx * dx + dy * dy);
-if (dist > 0.001f) {
-  state.enemyX += (dx / dist) * enemySpeed * dt;
-  state.enemyY += (dy / dist) * enemySpeed * dt;
+float edx = state.x - state.enemyX;
+float edy = state.y - state.enemyY;
+float edist = std::sqrt(edx * edx + edy * edy);
+if (edist < 1.0f) edist = 1.0f;
+float evx = (edx / edist) * enemySpeed;
+float evy = (edy / edist) * enemySpeed;
+
+float er = 12.0f;
+auto p = world.platform;
+float nextX = state.enemyX + evx * dt;
+float nextY = state.enemyY + evy * dt;
+float bx1 = p.x - er, bx2 = p.x + p.w + er;
+float by1 = p.y - er, by2 = p.y + p.h + er;
+
+if (nextX > bx1 && nextX < bx2 && nextY > by1 && nextY < by2) {
+  if (state.enemyY <= by1) {
+    evy = 0.0f;
+    evx = (state.x < p.x + p.w / 2.0f) ? -enemySpeed : enemySpeed;
+  } else if (state.enemyY >= by2) {
+    evy = 0.0f;
+    evx = (state.x < p.x + p.w / 2.0f) ? -enemySpeed : enemySpeed;
+  } else if (state.enemyX <= bx1) {
+    evx = 0.0f;
+    evy = (state.y < p.y + p.h / 2.0f) ? -enemySpeed : enemySpeed;
+  } else {
+    evx = 0.0f;
+    evy = (state.y < p.y + p.h / 2.0f) ? -enemySpeed : enemySpeed;
+  }
 }
+
+state.enemyX += evx * dt;
+state.enemyY += evy * dt;
 
 // ========================================================
 // 7. GEM PICKUP RADIUS CHECK

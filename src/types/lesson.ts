@@ -72,3 +72,47 @@ export interface Chapter {
   lessons: string[];
   capstoneId: string;
 }
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface UserProgressData {
+  currentXp: number;
+  completedLessonIds: string[];
+  completedPieceIds: string[];
+  currentLessonId: string;
+  codeDrafts?: Record<string, Partial<Record<Language, string>>>;
+}
+
+export interface ErrorLineInfo {
+  line: number;
+  column?: number;
+  message: string;
+}
+
+export interface FrameRateRateResult {
+  fps: number;
+  displacement: number;
+  dt: number;
+}
+
+export interface BenchmarkResult {
+  passed: boolean;
+  rates: FrameRateRateResult[];
+  divergencePercent: number;
+  summary: string;
+  recommendation: string;
+}
+
+export interface AiDiagnosticResult {
+  issue: string;
+  explanation: string;
+  recommendation: string;
+  suggestedCode: string;
+  isAiGenerated: boolean;
+  mode: string;
+}

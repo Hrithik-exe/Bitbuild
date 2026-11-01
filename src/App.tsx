@@ -6,10 +6,12 @@ import { LessonNote } from './components/LessonNote';
 import { MentorBox } from './components/Mentor/MentorBox';
 import { SkillTree } from './components/SkillTree';
 import { BugExplainModal } from './components/BugExplainModal';
+import { AuthModal } from './components/Auth/AuthModal';
 import { lessons, chapters } from './data/lessons';
-import type { Language, Lesson } from './types/lesson';
+import type { Language, Lesson, User, ErrorLineInfo } from './types/lesson';
 import { blipAudio } from './services/BlipAudio';
-import { pythonRunner } from './services/PythonRunner';
+import { pythonRunner, PythonRunnerService } from './services/PythonRunner';
+import { authService } from './services/AuthService';
 
 export function App() {
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lessons[0]);
@@ -22,27 +24,83 @@ export function App() {
   const [statusMessage, setStatusMessage] = useState('Click the canvas, then Run ▶');
   const [isError, setIsError] = useState(false);
   const [currentErrorText, setCurrentErrorText] = useState<string | null>(null);
+  const [errorInfo, setErrorInfo] = useState<ErrorLineInfo | null>(null);
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.has('auth');
+    }
+    return false;
+  });
+  const [user, setUser] = useState<User | null>(null);
+  const [engineStatus, setEngineStatus] = useState<string>('V8 JavaScript');
   const [updateFn, setUpdateFn] = useState<((state: Record<string, unknown>, keys: Record<string, boolean>, dt: number, world: Record<string, unknown>) => void) | null>(null);
+
+  // Synchronize authentication and persistent progress on mount
+  useEffect(() => {
+    authService.getMe().then(existingUser => {
+      if (existingUser) setUser(existingUser);
+    });
+
+    authService.getProgress().then(savedProgress => {
+      if (savedProgress) {
+        if (typeof savedProgress.currentXp === 'number') {
+          setCurrentXp(savedProgress.currentXp);
+        }
+        if (Array.isArray(savedProgress.completedLessonIds) && savedProgress.completedLessonIds.length > 0) {
+          setCompletedLessonIds(savedProgress.completedLessonIds);
+        }
+        if (Array.isArray(savedProgress.completedPieceIds) && savedProgress.completedPieceIds.length > 0) {
+          setCompletedPieceIds(savedProgress.completedPieceIds);
+        }
+        if (savedProgress.currentLessonId) {
+          const matchingLesson = lessons.find(l => l.id === savedProgress.currentLessonId);
+          if (matchingLesson) {
+            setCurrentLesson(matchingLesson);
+          }
+        }
+      }
+    });
+  }, []);
+
+  // Update engine status when language changes or Pyodide initializes
+  useEffect(() => {
+    if (language === 'python') {
+      setEngineStatus(pythonRunner.getEngineStatus('python'));
+      pythonRunner.initPyodide().then(() => {
+        setEngineStatus(pythonRunner.getEngineStatus('python'));
+      });
+    } else if (language === 'cpp') {
+      setEngineStatus('C++ AST Engine');
+    } else {
+      setEngineStatus('V8 JavaScript');
+    }
+  }, [language]);
 
   // Unified compile and run pipeline
   const compileCode = useCallback((sourceCode: string, lang: Language) => {
     try {
       if (lang === 'python' || lang === 'cpp') {
         const result = pythonRunner.compilePython(sourceCode, lang === 'cpp');
+        setEngineStatus(result.engine);
+
         if (!result.success || !result.updateFn) {
           setIsError(true);
           const errText = result.error || 'Compilation Error';
           setStatusMessage(errText);
           setCurrentErrorText(errText);
+          setErrorInfo(result.errorLine || PythonRunnerService.parseErrorLine(errText, sourceCode));
           setUpdateFn(null);
           blipAudio.playErrorTone();
           return false;
         }
+
         setUpdateFn(() => result.updateFn);
         setIsError(false);
         setCurrentErrorText(null);
-        setStatusMessage('Running simulation — use arrow keys or WASD / Space');
+        setErrorInfo(null);
+        setStatusMessage(`Running simulation (${result.engine}) — use arrow keys or WASD / Space`);
         return true;
       }
 
@@ -79,7 +137,7 @@ export function App() {
           width: 480,
           height: 280,
           groundY: 240,
-          platform: { x: 280, y: 145, w: 100, h: 18 },
+          platform: { x: 280, y: 170, w: 100, h: 18 },
           goal: { x: 416, y: 180, w: 38, h: 60 }
         }
       );
@@ -87,13 +145,16 @@ export function App() {
       setUpdateFn(() => fn);
       setIsError(false);
       setCurrentErrorText(null);
-      setStatusMessage('Running — use arrow keys or WASD / Space');
+      setErrorInfo(null);
+      setEngineStatus('V8 JavaScript');
+      setStatusMessage('Running simulation (V8 JavaScript) — use arrow keys or WASD / Space');
       return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setUpdateFn(null);
       setIsError(true);
       setCurrentErrorText(msg);
+      setErrorInfo(PythonRunnerService.parseErrorLine(msg, sourceCode));
       setStatusMessage(`Error: ${msg}`);
       blipAudio.playErrorTone();
       return false;
@@ -131,25 +192,40 @@ export function App() {
   const handleReset = () => {
     setCode(activeCode);
     compileCode(activeCode, language);
+    setErrorInfo(null);
     setStatusMessage('Lesson code reset & running.');
   };
+
+  // Helper to persist state to SQLite / local storage
+  const persistState = useCallback((newXp: number, newLessonIds: string[], newPieceIds: string[], lessonId: string) => {
+    authService.saveProgress({
+      currentXp: newXp,
+      completedLessonIds: newLessonIds,
+      completedPieceIds: newPieceIds,
+      currentLessonId: lessonId
+    });
+  }, []);
 
   // Handle capstone or lesson pass success
   const handleLessonSuccess = () => {
     if (!completedLessonIds.includes(currentLesson.id)) {
-      setCompletedLessonIds(prev => [...prev, currentLesson.id]);
-      setCurrentXp(prev => prev + currentLesson.xp);
+      const updatedLessons = [...completedLessonIds, currentLesson.id];
+      const updatedXp = currentXp + currentLesson.xp;
+      setCompletedLessonIds(updatedLessons);
+      setCurrentXp(updatedXp);
       blipAudio.playSuccessTone();
       setStatusMessage(`🎉 Level Completed! +${currentLesson.xp} XP Earned!`);
+      persistState(updatedXp, updatedLessons, completedPieceIds, currentLesson.id);
     }
   };
 
   // Switch active lesson
-  const loadLesson = (lesson: Lesson) => {
+  const loadLesson = useCallback((lesson: Lesson) => {
     setCurrentLesson(lesson);
     setCurrentPieceIndex(0);
     setActiveView('sandbox');
-  };
+    persistState(currentXp, completedLessonIds, completedPieceIds, lesson.id);
+  }, [currentXp, completedLessonIds, completedPieceIds, persistState]);
 
   // Navigation for Next and Prev piece-by-piece lessons
   const currentIdx = lessons.findIndex(l => l.id === currentLesson.id);
@@ -181,21 +257,31 @@ export function App() {
 
   const goToNextStep = useCallback(() => {
     if (currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1) {
+      let updatedPieces = completedPieceIds;
+      let updatedXp = currentXp;
       if (activePiece && !completedPieceIds.includes(activePiece.id)) {
-        setCompletedPieceIds(prev => [...prev, activePiece.id]);
-        setCurrentXp(prev => prev + 25);
+        updatedPieces = [...completedPieceIds, activePiece.id];
+        updatedXp = currentXp + 25;
+        setCompletedPieceIds(updatedPieces);
+        setCurrentXp(updatedXp);
         blipAudio.playSuccessTone();
       }
       setCurrentPieceIndex(prev => prev + 1);
+      persistState(updatedXp, completedLessonIds, updatedPieces, currentLesson.id);
     } else if (nextLesson) {
+      let updatedLessons = completedLessonIds;
+      let updatedXp = currentXp;
       if (!completedLessonIds.includes(currentLesson.id)) {
-        setCompletedLessonIds(prev => [...prev, currentLesson.id]);
-        setCurrentXp(prev => prev + currentLesson.xp);
+        updatedLessons = [...completedLessonIds, currentLesson.id];
+        updatedXp = currentXp + currentLesson.xp;
+        setCompletedLessonIds(updatedLessons);
+        setCurrentXp(updatedXp);
         blipAudio.playSuccessTone();
       }
       loadLesson(nextLesson);
+      persistState(updatedXp, updatedLessons, completedPieceIds, nextLesson.id);
     }
-  }, [currentLesson, currentPieceIndex, activePiece, completedPieceIds, completedLessonIds, nextLesson]);
+  }, [currentLesson, currentPieceIndex, activePiece, completedPieceIds, completedLessonIds, nextLesson, currentXp, persistState, loadLesson]);
 
   const goToPrevStep = useCallback(() => {
     if (currentLesson.pieces && currentPieceIndex > 0) {
@@ -203,7 +289,25 @@ export function App() {
     } else if (prevLesson) {
       loadLesson(prevLesson);
     }
-  }, [currentLesson, currentPieceIndex, prevLesson]);
+  }, [currentLesson, currentPieceIndex, prevLesson, loadLesson]);
+
+  // Handle Authentication Callbacks
+  const handleAuthSuccess = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
+    authService.getProgress().then(savedProgress => {
+      if (savedProgress) {
+        if (typeof savedProgress.currentXp === 'number') setCurrentXp(savedProgress.currentXp);
+        if (Array.isArray(savedProgress.completedLessonIds)) setCompletedLessonIds(savedProgress.completedLessonIds);
+        if (Array.isArray(savedProgress.completedPieceIds)) setCompletedPieceIds(savedProgress.completedPieceIds);
+      }
+    });
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setUser(null);
+    setStatusMessage('Logged out. Operating in local guest mode.');
+  };
 
   return (
     <div className="app-container">
@@ -216,6 +320,9 @@ export function App() {
         isMuted={isMuted}
         toggleMute={() => setIsMuted(blipAudio.toggleMute())}
         onExplainBug={() => setIsExplainModalOpen(true)}
+        user={user}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {activeView === 'skilltree' ? (
@@ -277,12 +384,17 @@ export function App() {
           <div className="grid">
             <CodeEditor
               code={code}
-              onChange={setCode}
+              onChange={(newCode) => {
+                setCode(newCode);
+                if (errorInfo) setErrorInfo(null);
+              }}
               onRun={compileAndRun}
               onReset={handleReset}
               language={language}
               filename={language === 'python' ? 'update.py' : language === 'cpp' ? 'update.cpp' : 'update.js'}
               hasError={isError}
+              errorInfo={errorInfo}
+              engineStatus={engineStatus}
             />
 
             <GameCanvas
@@ -310,7 +422,7 @@ export function App() {
         </div>
       )}
 
-      {/* "Explain My Bug" AI Diagnostics Modal Drawer */}
+      {/* "Explain My Bug" AI & Frame-Rate Diagnostics Modal */}
       <BugExplainModal
         isOpen={isExplainModalOpen}
         onClose={() => setIsExplainModalOpen(false)}
@@ -318,10 +430,18 @@ export function App() {
         lesson={currentLesson}
         code={code}
         language={language}
+        updateFn={updateFn}
         onApplyFix={(fixedCode) => {
           setCode(fixedCode);
-          compileAndRun();
+          compileCode(fixedCode, language);
         }}
+      />
+
+      {/* Sign In & Registration Modal with SQLite Local Persistence */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
       />
     </div>
   );

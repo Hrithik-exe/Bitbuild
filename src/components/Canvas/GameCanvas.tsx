@@ -48,7 +48,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       width: 480,
       height: 280,
       groundY: isGroundless ? -1 : 240,
-      platform: hasPlatform ? { x: 250, y: 145, w: 120, h: 20 } : null,
+      platform: hasPlatform ? { x: currentLessonId === 'capstone' ? 240 : 250, y: 170, w: 120, h: 20 } : null,
       goal: hasGoal ? { x: 416, y: 175, w: 38, h: 65 } : null
     };
   }, []);
@@ -316,6 +316,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           world.goal = null;
         }
 
+        // 5. In Capstone: Enforce solid platform boundary so enemy never phases through
+        if (isCapstoneLesson && world.platform && typeof state.enemyX === 'number' && typeof state.enemyY === 'number') {
+          const p = world.platform;
+          const er = 11;
+          const bx1 = p.x - er;
+          const bx2 = p.x + p.w + er;
+          const by1 = p.y - er;
+          const by2 = p.y + p.h + er;
+
+          if (state.enemyX > bx1 && state.enemyX < bx2 && state.enemyY > by1 && state.enemyY < by2) {
+            const dLeft = state.enemyX - bx1;
+            const dRight = bx2 - state.enemyX;
+            const dTop = state.enemyY - by1;
+            const dBottom = by2 - state.enemyY;
+            const minD = Math.min(dLeft, dRight, dTop, dBottom);
+            if (minD === dLeft) state.enemyX = bx1;
+            else if (minD === dRight) state.enemyX = bx2;
+            else if (minD === dTop) state.enemyY = by1;
+            else state.enemyY = by2;
+          }
+        }
+
         // Check Enemy Collision (Death Animation Trigger) - ONLY in chase & capstone
         if (isChaseOrCapstone && typeof state.enemyX === 'number' && typeof state.enemyY === 'number' && state.enemyX > 0 && !isWon) {
           const px = state.x + (state.width || 22) / 2;
@@ -340,7 +362,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
           if (playerHitsGoal && allCoinsCollected) {
             isWon = true;
-            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            const rect = canvas?.getBoundingClientRect();
+            const originX = rect ? (rect.left + rect.width * 0.85) / window.innerWidth : 0.5;
+            const originY = rect ? (rect.top + rect.height * 0.6) / window.innerHeight : 0.6;
+            confetti({
+              particleCount: 120,
+              spread: 80,
+              origin: { x: Math.max(0.05, Math.min(0.95, originX)), y: Math.max(0.05, Math.min(0.95, originY)) }
+            });
             if (onSuccess) onSuccess();
           }
         }
