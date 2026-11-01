@@ -99,7 +99,8 @@ class AuthService {
 
       return data;
     } catch (err: unknown) {
-      const isNetwork = err instanceof TypeError && (err.message.includes('fetch') || err.message.includes('Network'));
+      const msg = err instanceof Error ? err.message : String(err);
+      const isNetwork = msg.includes('fetch') || msg.includes('Network') || msg.includes('Failed') || msg.includes('Load');
       if (isNetwork) {
         const fallbackUser: User = {
           id: 'usr_local_' + Math.random().toString(36).slice(2, 10),
@@ -137,7 +138,8 @@ class AuthService {
       }
       return data;
     } catch (err: unknown) {
-      const isNetwork = err instanceof TypeError && (err.message.includes('fetch') || err.message.includes('Network'));
+      const msg = err instanceof Error ? err.message : String(err);
+      const isNetwork = msg.includes('fetch') || msg.includes('Network') || msg.includes('Failed') || msg.includes('Load');
       if (isNetwork) {
         const clean = usernameOrEmail.trim().toLowerCase();
         if (clean === 'demo_user' || clean === 'demo@bitbuild.io') {
