@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { CodeEditor } from './components/Editor/CodeEditor';
 import { GameCanvas } from './components/Canvas/GameCanvas';
@@ -14,6 +15,8 @@ import { pythonRunner, PythonRunnerService } from './services/PythonRunner';
 import { authService } from './services/AuthService';
 
 export function App() {
+  const navigate = useNavigate();
+  const [authChecking, setAuthChecking] = useState(true);
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lessons[0]);
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
   const [currentXp, setCurrentXp] = useState(0);
@@ -26,24 +29,31 @@ export function App() {
   const [currentErrorText, setCurrentErrorText] = useState<string | null>(null);
   const [errorInfo, setErrorInfo] = useState<ErrorLineInfo | null>(null);
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return params.has('auth');
-    }
-    return false;
-  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [engineStatus, setEngineStatus] = useState<string>('V8 JavaScript');
   const [updateFn, setUpdateFn] = useState<((state: Record<string, unknown>, keys: Record<string, boolean>, dt: number, world: Record<string, unknown>) => void) | null>(null);
 
-  // Synchronize authentication and persistent progress on mount
+  // Synchronize authentication and persistent progress on mount.
+  // Gated route: Users cannot enter without logging in.
   useEffect(() => {
+    let active = true;
     authService.getMe().then(existingUser => {
-      if (existingUser) setUser(existingUser);
+      if (!active) return;
+      if (existingUser) {
+        setUser(existingUser);
+        setAuthChecking(false);
+      } else {
+        // Not logged in -> redirect to homepage with login modal open
+        navigate('/?auth=required', { replace: true });
+      }
+    }).catch(() => {
+      if (!active) return;
+      navigate('/?auth=required', { replace: true });
     });
 
     authService.getProgress().then(savedProgress => {
+      if (!active) return;
       if (savedProgress) {
         if (typeof savedProgress.currentXp === 'number') {
           setCurrentXp(savedProgress.currentXp);
@@ -62,7 +72,11 @@ export function App() {
         }
       }
     });
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
 
   // Update engine status when language changes or Pyodide initializes
   useEffect(() => {
@@ -306,8 +320,19 @@ export function App() {
   const handleLogout = async () => {
     await authService.logout();
     setUser(null);
-    setStatusMessage('Logged out. Operating in local guest mode.');
+    navigate('/', { replace: true });
   };
+
+  if (authChecking) {
+    return (
+      <div className="app-container" style={{ display: 'grid', placeItems: 'center', height: '100vh', background: '#090B10' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", color: '#4FD1C5', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span className="live-dot" />
+          VERIFYING ACCESS CREDENTIALS...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { createWorld } from './world';
@@ -12,6 +12,9 @@ import { Playground } from './Playground';
 import { JourneyOverlay } from './Journey';
 import { lessons } from '../data/lessons';
 import { blipAudio } from '../services/BlipAudio';
+import { authService } from '../services/AuthService';
+import { AuthModal } from '../components/Auth/AuthModal';
+import type { User } from '../types/lesson';
 import './home.css';
 
 const IDS = ['ch-intro', 'ch-idea', 'ch-play', 'ch-journey', 'ch-enter'];
@@ -38,6 +41,8 @@ function detectLite() {
 }
 
 export function Home() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const story = useRef(createStory()).current;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = usePrefersReducedMotion();
@@ -47,7 +52,23 @@ export function Home() {
   const [noGL, setNoGL] = useState(false);
   const [sound, setSound] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const view = useStoryScroll(story, ready, reduced);
+
+  /* check existing user session and URL params on mount */
+  useEffect(() => {
+    authService.getMe().then((existingUser) => {
+      if (existingUser) setUser(existingUser);
+    });
+
+    const params = new URLSearchParams(location.search);
+    if (params.has('auth')) {
+      setAuthMode('login');
+      setAuthOpen(true);
+    }
+  }, [location.search]);
 
   /* sound is OFF by default; restore the app's default on the way out */
   useEffect(() => {
@@ -163,8 +184,43 @@ export function Home() {
     [reduced],
   );
 
-  const onEnterApp = () => {
+  /* Auth triggers right on the homepage */
+  const handleOpenLogin = () => {
+    setAuthMode('login');
+    setAuthOpen(true);
+    setMenu(false);
+  };
+
+  const handleOpenRegister = () => {
+    setAuthMode('register');
+    setAuthOpen(true);
+    setMenu(false);
+  };
+
+  /* Strictly gated entry: users cannot enter without logging in */
+  const handleEnterApp = () => {
+    if (user || authService.getToken()) {
+      if (sound) blipAudio.playSuccessTone();
+      navigate('/app');
+    } else {
+      if (sound) blipAudio.playBlip();
+      setAuthMode('login');
+      setAuthOpen(true);
+      setMenu(false);
+    }
+  };
+
+  const handleAuthSuccess = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
+    setAuthOpen(false);
     if (sound) blipAudio.playSuccessTone();
+    // Seamless entrance right after authenticating
+    navigate('/app');
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setUser(null);
   };
 
   return (
@@ -209,15 +265,37 @@ export function Home() {
           ))}
         </nav>
         <div className="bb-nav-right">
-          <Link className="bb-nav-signin" to="/app?auth=1">
-            SIGN IN
-          </Link>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ font: '500 12px var(--bb-mono)', color: 'var(--bb-cyan)' }}>
+                {user.username}
+              </span>
+              <button
+                type="button"
+                className="bb-icon-btn"
+                style={{ width: 'auto', padding: '0 8px', fontSize: '11px', color: 'var(--bb-dim)' }}
+                onClick={handleLogout}
+                title="Log out"
+              >
+                LOGOUT
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="bb-nav-signin"
+              onClick={handleOpenLogin}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              SIGN IN
+            </button>
+          )}
           <button type="button" className="bb-icon-btn" onClick={toggleSound} aria-pressed={sound} aria-label={sound ? 'Turn sound off' : 'Turn sound on'}>
             <SoundIcon on={sound} />
           </button>
-          <Link className="bb-btn bb-btn--small bb-nav-cta" to="/app" onClick={onEnterApp}>
+          <button type="button" className="bb-btn bb-btn--small bb-nav-cta" onClick={handleEnterApp}>
             ENTER BITBUILD
-          </Link>
+          </button>
           <button type="button" className="bb-icon-btn bb-burger" onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-controls="bb-menu" aria-label="Menu">
             <MenuIcon open={menu} />
           </button>
@@ -243,12 +321,18 @@ export function Home() {
                 {c.t}
               </button>
             ))}
-            <Link to="/app?auth=1" onClick={() => setMenu(false)}>
-              SIGN IN
-            </Link>
-            <Link className="bb-btn bb-btn--primary" to="/app" onClick={onEnterApp}>
+            {user ? (
+              <button type="button" onClick={handleLogout}>
+                LOG OUT ({user.username})
+              </button>
+            ) : (
+              <button type="button" onClick={handleOpenLogin}>
+                SIGN IN
+              </button>
+            )}
+            <button type="button" className="bb-btn bb-btn--primary" onClick={handleEnterApp}>
               ENTER BITBUILD <ArrowIcon />
-            </Link>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -270,8 +354,8 @@ export function Home() {
                 What if learning to code felt less like studying and more like exploring?
               </p>
               <div className="bb-rise" style={vi(5)}>
-                <button type="button" className="bb-btn bb-btn--primary" onClick={() => goTo(1)}>
-                  ENTER THE WORLD <ArrowIcon />
+                <button type="button" className="bb-btn bb-btn--primary" onClick={handleEnterApp}>
+                  ENTER BITBUILD <ArrowIcon />
                 </button>
               </div>
             </div>
@@ -323,14 +407,25 @@ export function Home() {
                 YOUR JOURNEY STARTS WITH <span className="bb-grad">ONE LINE OF CODE.</span>
               </h2>
               <p className="bb-lede">You've seen what you can build. Now it's your turn.</p>
-              <p className="bb-lede bb-lede--dim">Start exploring. Start creating. Start learning.</p>
+              <p className="bb-lede bb-lede--dim">Sign in or create an account to save your progress and level up.</p>
               <div className="bb-enter-cta">
-                <Link className="bb-btn bb-btn--primary bb-btn--big" to="/app" onClick={onEnterApp}>
+                <button type="button" className="bb-btn bb-btn--primary bb-btn--big" onClick={handleEnterApp}>
                   ENTER BITBUILD <ArrowIcon />
-                </Link>
-                <Link className="bb-link" to="/app?auth=1">
-                  Sign in or create an account
-                </Link>
+                </button>
+                {!user ? (
+                  <button
+                    type="button"
+                    className="bb-link"
+                    onClick={handleOpenRegister}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Sign in or create an account
+                  </button>
+                ) : (
+                  <span style={{ font: '500 13px var(--bb-mono)', color: 'var(--bb-cyan)' }}>
+                    Logged in as {user.username}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -340,11 +435,41 @@ export function Home() {
       <footer className="bb-footer">
         <Wordmark />
         <nav aria-label="Footer">
-          <Link to="/app">Open the app</Link>
-          <Link to="/app?auth=1">Sign in</Link>
+          <button
+            type="button"
+            onClick={handleEnterApp}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', font: 'inherit' }}
+          >
+            Open the app
+          </button>
+          {!user ? (
+            <button
+              type="button"
+              onClick={handleOpenLogin}
+              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', font: 'inherit' }}
+            >
+              Sign in
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', font: 'inherit' }}
+            >
+              Sign out ({user.username})
+            </button>
+          )}
         </nav>
         <p>Code. Play. Level up.</p>
       </footer>
+
+      {/* Embedded Sign In & Registration Modal on Homepage */}
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        initialMode={authMode}
+      />
     </div>
   );
 }
