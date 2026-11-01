@@ -39,52 +39,79 @@ export const lessons: Lesson[] = [
     chapter: 'ch1',
     xp: 50,
     note: {
-      title: 'Reading input & moving a sprite',
+      title: 'Mission 1: Move, collect, escape',
       body: [
-        'The engine calls your update(state, keys, dt, world) function every animation frame. keys tells you which arrow keys are currently held down, and dt is the time in seconds since the last frame — multiply by dt so movement speed doesn\'t depend on frame rate.',
-        'Try changing speed, or make the player move diagonally faster than it should (a classic bug — fix it by normalizing the vector).',
-        '📐 Coordinates Notice: In 2D game engines and HTML5 canvas, (0,0) is at the top-left ceiling (roof) and +Y points DOWN. If this feels inverted compared to standard graphing, toggle "📐 Math (+Y Up)" above the canvas to see intuitive altitude from the ground!'
+        'Your goal: collect all 3 stars, then reach the EXIT. The checklist along the bottom of the canvas ticks off as you go. Each task is one line of code that you write in the editor.',
+        'The engine calls your update(state, keys, dt, world) function every frame. <code class="inline">keys</code> tells you which arrow keys are held, <code class="inline">state</code> is your player, and <code class="inline">dt</code> is the time since the last frame in seconds. Multiply speed by dt so the game runs the same on every screen.',
+        'Task 1 is written for you: read it, then press Run and move right to grab star 1. Tasks 2, 3 and 4 are yours. Use the mentor tips if you get stuck.',
+        'Remember: on a game screen, (0,0) is the top-left corner and y grows DOWNWARD. That matters for Task 2 and Task 4.'
       ]
     },
     mentorLines: [
       { speaker: 'mentorA', text: "Welcome to BitBuild! I'm Pixel. Let's start with basic sprite controls.", trigger: 'onEnter' },
-      { speaker: 'mentorB', text: 'Notice the coordinate mode buttons above the canvas? You can toggle between Math and Screen coordinates anytime!', trigger: 'onEnter' }
+      { speaker: 'mentorB', text: 'Your mission: collect the 3 stars, then reach the EXIT. Each task is one line of code, and Task 1 is already done for you.', trigger: 'onEnter' },
+      { speaker: 'mentorB', text: 'Task 2 hint: on screen, y grows DOWNWARD. So moving down means adding to state.y.' },
+      { speaker: 'mentorA', text: 'Task 3 hint: left is the opposite of right. Subtract from state.x instead of adding to it.' },
+      { speaker: 'mentorB', text: 'Task 4 hint: up is the opposite of down. Subtract from state.y, and check keys.up.' },
+      { speaker: 'mentorA', text: "Always multiply by dt. If something misbehaves, press 'Explain My Bug' at the top and I'll help you read the error." }
     ],
     code: {
-      javascript: `// Move the player with the arrow keys
+      javascript: `// MISSION: collect the 3 stars, then reach the EXIT.
 const speed = 150; // pixels per second
 
-if (keys.left)  state.x -= speed * dt;
+// TASK 1 (done for you): move RIGHT to the first star
 if (keys.right) state.x += speed * dt;
-if (keys.up)    state.y -= speed * dt;
-if (keys.down)  state.y += speed * dt;
 
-// Keep the player inside the canvas
+// TASK 2: move DOWN to the second star.
+// Hint: on screen, y grows downward.
+
+
+// TASK 3: move LEFT to the third star.
+
+
+// TASK 4: move UP to the EXIT.
+
+
+// Keep the player inside the canvas (done for you)
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));
 state.y = Math.max(0, Math.min(world.height - state.height, state.y));`,
-      python: `# Move player with arrow keys (Python Pyodide runtime)
+      python: `# MISSION: collect the 3 stars, then reach the EXIT.
 speed = 150.0  # pixels per second
 
-if keys.left:
-    state['x'] -= speed * dt
+# TASK 1 (done for you): move RIGHT to the first star
 if keys.right:
     state['x'] += speed * dt
-if keys.up:
-    state['y'] -= speed * dt
-if keys.down:
-    state['y'] += speed * dt
 
-# Keep player inside canvas boundary
+# TASK 2: move DOWN to the second star.
+# Hint: on screen, y grows downward.
+
+
+# TASK 3: move LEFT to the third star.
+
+
+# TASK 4: move UP to the EXIT.
+
+
+# Keep the player inside the canvas (done for you)
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))
 state['y'] = max(0, min(world['height'] - state['height'], state['y']))`,
-      cpp: `// C++ Simulation Sandbox
+      cpp: `// MISSION: collect the 3 stars, then reach the EXIT.
 float speed = 150.0f;
 
-if (keys.left)  state.x -= speed * dt;
+// TASK 1 (done for you): move RIGHT to the first star
 if (keys.right) state.x += speed * dt;
-if (keys.up)    state.y -= speed * dt;
-if (keys.down)  state.y += speed * dt;
 
+// TASK 2: move DOWN to the second star.
+// Hint: on screen, y grows downward.
+
+
+// TASK 3: move LEFT to the third star.
+
+
+// TASK 4: move UP to the EXIT.
+
+
+// Keep the player inside the canvas (done for you)
 state.x = std::clamp(state.x, 0.0f, world.width - state.width);
 state.y = std::clamp(state.y, 0.0f, world.height - state.height);`
     }

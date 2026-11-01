@@ -23,6 +23,23 @@ interface DebrisParticle {
   maxLife: number;
 }
 
+// Collectibles per lesson. 'move' has 3 numbered stars (engine collects them);
+// the capstone has energy gems that the learner's own code collects.
+const coinsFor = (id: string) =>
+  id === 'capstone'
+    ? [
+        { x: 300, y: 115, collected: false },
+        { x: 160, y: 185, collected: false },
+        { x: 360, y: 215, collected: false }
+      ]
+    : id === 'move'
+      ? [
+          { x: 400, y: 70, collected: false },
+          { x: 400, y: 210, collected: false },
+          { x: 150, y: 210, collected: false }
+        ]
+      : [];
+
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   updateFn,
   statusMessage,
@@ -43,13 +60,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const initWorld = useCallback((currentLessonId: string): WorldConfig => {
     const isGroundless = ['move', 'gravity', 'gravity-1'].includes(currentLessonId);
     const hasPlatform = ['collision', 'capstone'].includes(currentLessonId);
-    const hasGoal = currentLessonId === 'capstone';
+    const hasGoal = ['move', 'capstone'].includes(currentLessonId);
     return {
       width: 480,
       height: 280,
       groundY: isGroundless ? -1 : 240,
       platform: hasPlatform ? { x: currentLessonId === 'capstone' ? 240 : 250, y: 170, w: 120, h: 20 } : null,
-      goal: hasGoal ? { x: 416, y: 175, w: 38, h: 65 } : null
+      goal: hasGoal
+        ? (currentLessonId === 'move' ? { x: 128, y: 12, w: 48, h: 44 } : { x: 416, y: 175, w: 38, h: 65 })
+        : null
     };
   }, []);
 
@@ -59,7 +78,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const isMoveLesson = lessonId === 'move';
   const isAirborne = ['move', 'gravity', 'gravity-1', 'gravity-2'].includes(lessonId);
   const hasEnemyLesson = ['chase', 'capstone'].includes(lessonId);
-  const isCapstone = lessonId === 'capstone';
 
   const stateRef = useRef<PlayerState>({
     x: 60,
@@ -73,11 +91,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     enemyY: hasEnemyLesson ? 70 : -100,
     enemyRadius: 10,
     score: 0,
-    coins: isCapstone ? [
-      { x: 300, y: 115, collected: false },
-      { x: 160, y: 185, collected: false },
-      { x: 360, y: 215, collected: false }
-    ] : []
+    coins: coinsFor(lessonId)
   });
 
   const keysRef = useRef<Record<string, boolean>>({
@@ -136,17 +150,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     stateRef.current.enemyY = hasEnemy ? 70 : -100;
     stateRef.current.enemyRadius = 10;
 
-    if (currentId === 'capstone') {
-      stateRef.current.coins = [
-        { x: 300, y: 115, collected: false },
-        { x: 160, y: 185, collected: false },
-        { x: 360, y: 215, collected: false }
-      ];
-      stateRef.current.score = 0;
-    } else {
-      stateRef.current.coins = [];
-      stateRef.current.score = 0;
-    }
+    stateRef.current.coins = coinsFor(currentId);
+    stateRef.current.score = 0;
 
     keysRef.current.left = false;
     keysRef.current.right = false;
@@ -292,11 +297,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         // STRICT LEVEL SANITIZATION: enforce that lessons only retain elements they need
         const isCapstoneLesson = lessonId === 'capstone';
+        const isGoalLesson = ['move', 'capstone'].includes(lessonId);
         const isChaseOrCapstone = ['chase', 'capstone'].includes(lessonId);
         const isPlatformLesson = ['collision', 'capstone'].includes(lessonId);
 
-        // 1. Coins only exist in capstone (remove blue dots everywhere else)
-        if (!isCapstoneLesson && state.coins && state.coins.length > 0) {
+        // 1. Coins only exist in move (stars) & capstone (gems)
+        if (!isGoalLesson && state.coins && state.coins.length > 0) {
           state.coins = [];
         }
 
@@ -312,8 +318,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
 
         // 4. Portal only exists in capstone (remove portal everywhere else)
-        if (!isCapstoneLesson && world.goal) {
+        if (!isGoalLesson && world.goal) {
           world.goal = null;
+        }
+
+        // 4b. Movement mission: the engine collects stars the player touches
+        if (lessonId === 'move' && state.coins) {
+          const cx = state.x + (state.width || 22) / 2;
+          const cy = state.y + (state.height || 22) / 2;
+          state.coins.forEach(c => {
+            if (!c.collected && Math.hypot(cx - c.x, cy - c.y) < 17) {
+              c.collected = true;
+              state.score = (state.score || 0) + 10;
+            }
+          });
         }
 
         // 5. In Capstone: Enforce solid platform boundary so enemy never phases through
@@ -351,7 +369,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         // Capstone Win Condition Check (Dynamic portal hitbox) - ONLY in capstone
         const currentGoal = world.goal;
-        if (isCapstoneLesson && currentGoal && !isWon) {
+        if (isGoalLesson && currentGoal && !isWon) {
           const playerHitsGoal =
             state.x < currentGoal.x + currentGoal.w &&
             state.x + (state.width || 22) > currentGoal.x &&
@@ -556,22 +574,31 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       // Draw Coins / Energy Gems (Blue dots: ONLY in capstone level)
-      if (lessonId === 'capstone' && state.coins && state.coins.length > 0) {
-        state.coins.forEach(coin => {
+      if (['move', 'capstone'].includes(lessonId) && state.coins && state.coins.length > 0) {
+        state.coins.forEach((coin, idx) => {
           if (!coin.collected) {
             ctx.fillStyle = '#4FD1C5';
             ctx.shadowColor = 'rgba(79, 209, 197, 0.8)';
             ctx.shadowBlur = 10;
             ctx.beginPath();
-            ctx.arc(coin.x, coin.y, 6, 0, Math.PI * 2);
+            ctx.arc(coin.x, coin.y, lessonId === 'move' ? 9 : 6, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
+            if (lessonId === 'move') {
+              ctx.fillStyle = '#0B0E14';
+              ctx.font = 'bold 10px "JetBrains Mono", monospace';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(String(idx + 1), coin.x, coin.y + 0.5);
+              ctx.textBaseline = 'alphabetic';
+            }
           }
         });
       }
 
       // Draw Portal Goal (ONLY in capstone level)
-      const g = lessonId === 'capstone' ? world.goal : null;
+      const g = ['move', 'capstone'].includes(lessonId) ? world.goal : null;
+      const goalName = lessonId === 'move' ? 'EXIT' : 'PORTAL';
       if (g && typeof g.x === 'number' && typeof g.y === 'number' && typeof g.w === 'number' && typeof g.h === 'number') {
         const allCoinsCollected = Boolean(state.coins && state.coins.length > 0 && state.coins.every(c => c.collected));
         const coinsCollectedCount = state.coins ? state.coins.filter(c => c.collected).length : 0;
@@ -592,7 +619,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.fillStyle = '#00ff88';
           ctx.font = 'bold 9px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText('PORTAL', g.x + g.w / 2, g.y + g.h / 2 - 2);
+          ctx.fillText(goalName, g.x + g.w / 2, g.y + g.h / 2 - 2);
           ctx.fillText('OPEN', g.x + g.w / 2, g.y + g.h / 2 + 10);
         } else {
           // Locked Amber Portal
@@ -609,9 +636,34 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.fillStyle = '#F0A94E';
           ctx.font = 'bold 9px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText('PORTAL', g.x + g.w / 2, g.y + g.h / 2 - 2);
+          ctx.fillText(goalName, g.x + g.w / 2, g.y + g.h / 2 - 2);
           ctx.fillText(state.coins && state.coins.length > 0 ? `${coinsCollectedCount}/${totalCoins}` : 'EXIT', g.x + g.w / 2, g.y + g.h / 2 + 10);
         }
+      }
+
+      // Movement mission checklist along the bottom edge
+      if (lessonId === 'move' && state.coins && state.coins.length === 3) {
+        const tasks = [
+          { label: '1 RIGHT', done: state.coins[0].collected },
+          { label: '2 DOWN', done: state.coins[1].collected },
+          { label: '3 LEFT', done: state.coins[2].collected },
+          { label: '4 UP: EXIT', done: isWon }
+        ];
+        tasks.forEach((t, i) => {
+          const bx = 10 + i * 118;
+          const by = worldH - 24;
+          ctx.fillStyle = t.done ? 'rgba(79, 209, 197, 0.22)' : 'rgba(11, 14, 20, 0.7)';
+          ctx.strokeStyle = t.done ? '#4FD1C5' : 'rgba(255, 255, 255, 0.22)';
+          ctx.lineWidth = 1;
+          ctx.fillRect(bx, by, 110, 17);
+          ctx.strokeRect(bx + 0.5, by + 0.5, 109, 16);
+          ctx.fillStyle = t.done ? '#4FD1C5' : 'rgba(232, 234, 237, 0.65)';
+          ctx.font = 'bold 9px "JetBrains Mono", monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${t.done ? 'DONE ' : ''}${t.label}`, bx + 7, by + 9);
+          ctx.textBaseline = 'alphabetic';
+        });
       }
 
       // Draw Enemy (Red dot: ONLY in chase & capstone levels)
