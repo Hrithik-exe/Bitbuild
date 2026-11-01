@@ -369,16 +369,16 @@
   position: relative;
 }
 .bb-ch--intro {
-  height: 125vh;
+  height: 190vh;
 }
 .bb-ch--idea {
-  height: 160vh;
+  height: 300vh;
 }
 .bb-ch--journey {
-  height: 260vh;
+  height: 520vh;
 }
 .bb-ch--enter {
-  height: 140vh;
+  height: 220vh;
 }
 .bb-pin {
   position: sticky;
@@ -452,7 +452,7 @@
   letter-spacing: -0.025em;
   opacity: 0;
   transform: translateY(26px);
-  transition: opacity 0.35s cubic-bezier(0.2, 0.9, 0.3, 1), transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+  transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .bb-idea-line.is-on {
   opacity: 1;
@@ -463,7 +463,7 @@
 .bb-play {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 12vh var(--bb-pad) 18vh;
+  padding: 14vh var(--bb-pad) 40vh;
 }
 .bb-demos {
   display: grid;
