@@ -51,8 +51,7 @@ export default function LiveLab() {
 
   return (
     <div className="mission-layout">
-    <MissionPanel lessonId={lesson.id} doneIds={missionDone} rewardXp={lesson.xp} />
-    <div className="grid">
+      <MissionPanel lessonId={lesson.id} doneIds={missionDone} rewardXp={lesson.xp} />
       <CodeEditor
         code={code}
         onChange={(c) => {
@@ -71,7 +70,6 @@ export default function LiveLab() {
         engineStatus="V8 JavaScript"
       />
       <GameCanvas updateFn={updateFn} statusMessage={status} isError={isError} lessonId={lesson.id} onMissionProgress={setMissionDone} />
-    </div>
     </div>
   );
 }

@@ -43,9 +43,9 @@ body:has(.app-container) {
 }
 
 .app-container {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 6px 16px 10px;
+  padding: 6px 14px 10px;
   height: 100vh;
   display: flex;
   flex-direction: column;

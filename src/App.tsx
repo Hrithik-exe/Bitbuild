@@ -429,7 +429,7 @@ export function App() {
             </div>
           )}
 
-          {/* 2-Panel Split Grid Workspace */}
+          {/* 3-Column 1:1:1 Split Workspace: Tasks, Code, Simulation */}
           <div className="mission-layout">
             <MissionPanel
               lessonId={activeSimId}
@@ -439,42 +439,41 @@ export function App() {
               nextLabel={nextLabel}
               onNext={goToNextStep}
             />
-            <div className="grid">
-              <CodeEditor
-                code={code}
-                onChange={(newCode) => {
-                  setCode(newCode);
-                  if (errorInfo) setErrorInfo(null);
-                }}
-                onRun={compileAndRun}
-                onReset={handleReset}
-                language={language}
-                filename={language === 'python' ? 'update.py' : language === 'cpp' ? 'update.cpp' : 'update.js'}
-                hasError={isError}
-                errorInfo={errorInfo}
-                engineStatus={engineStatus}
-                dialogueLines={activeMentorLines}
-                onNextLesson={goToNextStep}
-                onPrevLesson={goToPrevStep}
-                hasNextLesson={hasNext}
-                hasPrevLesson={hasPrev}
-                nextLessonLabel={nextLabel}
-                prevLessonLabel={prevLabel}
-              />
 
-              <GameCanvas
-                updateFn={updateFn}
-                statusMessage={statusMessage}
-                isError={isError}
-                lessonId={activeSimId}
-                onMissionProgress={handleMissionProgress}
-                onSuccess={
-                  currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1
-                    ? handlePieceSuccess
-                    : handleLessonSuccess
-                }
-              />
-            </div>
+            <CodeEditor
+              code={code}
+              onChange={(newCode) => {
+                setCode(newCode);
+                if (errorInfo) setErrorInfo(null);
+              }}
+              onRun={compileAndRun}
+              onReset={handleReset}
+              language={language}
+              filename={language === 'python' ? 'update.py' : language === 'cpp' ? 'update.cpp' : 'update.js'}
+              hasError={isError}
+              errorInfo={errorInfo}
+              engineStatus={engineStatus}
+              dialogueLines={activeMentorLines}
+              onNextLesson={goToNextStep}
+              onPrevLesson={goToPrevStep}
+              hasNextLesson={hasNext}
+              hasPrevLesson={hasPrev}
+              nextLessonLabel={nextLabel}
+              prevLessonLabel={prevLabel}
+            />
+
+            <GameCanvas
+              updateFn={updateFn}
+              statusMessage={statusMessage}
+              isError={isError}
+              lessonId={activeSimId}
+              onMissionProgress={handleMissionProgress}
+              onSuccess={
+                currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1
+                  ? handlePieceSuccess
+                  : handleLessonSuccess
+              }
+            />
           </div>
         </div>
       )}
