@@ -56,62 +56,59 @@ export const lessons: Lesson[] = [
       { speaker: 'mentorA', text: "Always multiply by dt. If something misbehaves, press 'Explain My Bug' at the top and I'll help you read the error." }
     ],
     code: {
-      javascript: `// MISSION: collect the 3 stars, then reach the EXIT.
-const speed = 150; // pixels per second
+      javascript: `// Goal: Collect 3 stars, reach EXIT
+const speed = 150;
 
-// TASK 1 (done for you): move RIGHT to the first star
+// Task 1: Move right (done)
 if (keys.right) state.x += speed * dt;
 
-// TASK 2: move DOWN to the second star.
-// Hint: on screen, y grows downward.
+// Task 2: Move down (+y)
 
 
-// TASK 3: move LEFT to the third star.
+// Task 3: Move left (-x)
 
 
-// TASK 4: move UP to the EXIT.
+// Task 4: Move up (-y)
 
 
-// Keep the player inside the canvas (done for you)
+// Clamp to canvas (done)
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));
 state.y = Math.max(0, Math.min(world.height - state.height, state.y));`,
-      python: `# MISSION: collect the 3 stars, then reach the EXIT.
-speed = 150.0  # pixels per second
+      python: `# Goal: Collect 3 stars, reach EXIT
+speed = 150.0
 
-# TASK 1 (done for you): move RIGHT to the first star
+# Task 1: Move right (done)
 if keys.right:
     state['x'] += speed * dt
 
-# TASK 2: move DOWN to the second star.
-# Hint: on screen, y grows downward.
+# Task 2: Move down (+y)
 
 
-# TASK 3: move LEFT to the third star.
+# Task 3: Move left (-x)
 
 
-# TASK 4: move UP to the EXIT.
+# Task 4: Move up (-y)
 
 
-# Keep the player inside the canvas (done for you)
+# Clamp to canvas (done)
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))
 state['y'] = max(0, min(world['height'] - state['height'], state['y']))`,
-      cpp: `// MISSION: collect the 3 stars, then reach the EXIT.
+      cpp: `// Goal: Collect 3 stars, reach EXIT
 float speed = 150.0f;
 
-// TASK 1 (done for you): move RIGHT to the first star
+// Task 1: Move right (done)
 if (keys.right) state.x += speed * dt;
 
-// TASK 2: move DOWN to the second star.
-// Hint: on screen, y grows downward.
+// Task 2: Move down (+y)
 
 
-// TASK 3: move LEFT to the third star.
+// Task 3: Move left (-x)
 
 
-// TASK 4: move UP to the EXIT.
+// Task 4: Move up (-y)
 
 
-// Keep the player inside the canvas (done for you)
+// Clamp to canvas (done)
 state.x = std::clamp(state.x, 0.0f, world.width - state.width);
 state.y = std::clamp(state.y, 0.0f, world.height - state.height);`
     }
@@ -185,52 +182,43 @@ if (state.y > world.height - state.height) {
           { speaker: 'mentorB', text: "Nothing happens? Check the status bar under the canvas for errors, or press 'Explain My Bug' at the top." }
         ],
         code: {
-          javascript: `// MISSION: make the player fall and land on the pad below.
-// The floor clamp at the bottom is done for you.
-const gravity = 800; // pixels per second squared
+          javascript: `// Goal: Accelerate downward onto pad
+const gravity = 800;
 
-// TASK 1: gravity speeds you up.
-// Add gravity * dt to state.vy.
+// Task 1: state.vy += gravity * dt
 
 
-// TASK 2: velocity moves you.
-// Add state.vy * dt to state.y.
+// Task 2: state.y += state.vy * dt
 
 
-// Stop at canvas bottom (done for you)
+// Stop at floor (done)
 if (state.y > world.height - state.height) {
   state.y = world.height - state.height;
   state.vy = 0;
 }`,
-          python: `# MISSION: make the player fall and land on the pad below.
-# The floor clamp at the bottom is done for you.
-gravity = 800.0  # pixels per second squared
+          python: `# Goal: Accelerate downward onto pad
+gravity = 800.0
 
-# TASK 1: gravity speeds you up.
-# Add gravity * dt to state['vy'].
+# Task 1: state['vy'] += gravity * dt
 
 
-# TASK 2: velocity moves you.
-# Add state['vy'] * dt to state['y'].
+# Task 2: state['y'] += state['vy'] * dt
 
 
-# Stop at canvas bottom (done for you)
+# Stop at floor (done)
 if state['y'] > world['height'] - state['height']:
     state['y'] = world['height'] - state['height']
     state['vy'] = 0.0`,
-          cpp: `// MISSION: make the player fall and land on the pad below.
-// The floor clamp at the bottom is done for you.
-float gravity = 800.0f; // pixels per second squared
+          cpp: `// Goal: Accelerate downward onto pad
+float gravity = 800.0f;
 
-// TASK 1: gravity speeds you up.
-// Add gravity * dt to state.vy.
+// Task 1: state.vy += gravity * dt
 
 
-// TASK 2: velocity moves you.
-// Add state.vy * dt to state.y.
+// Task 2: state.y += state.vy * dt
 
 
-// Stop at canvas bottom (done for you)
+// Stop at floor (done)
 if (state.y > world.height - state.height) {
   state.y = world.height - state.height;
   state.vy = 0.0f;
@@ -256,59 +244,44 @@ if (state.y > world.height - state.height) {
           { speaker: 'mentorB', text: 'Last task: set state.onGround = true when you land, and false when you are in the air.' }
         ],
         code: {
-          javascript: `// MISSION: land on the floor and stay there.
+          javascript: `// Goal: Land on floor (world.groundY - state.height)
 const gravity = 800;
-
-// Gravity (done for you). But there is no floor yet,
-// so the player falls forever!
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
-// TASK 1: where does the player stand? Make a variable called floorY
-// equal to world.groundY - state.height.
+// Task 1: const floorY = world.groundY - state.height;
 
 
-// TASK 2: if state.y has reached floorY, put the player ON the floor
-// (state.y = floorY) and stop its fall (state.vy = 0).
+// Task 2: if (state.y >= floorY) { state.y = floorY; state.vy = 0; }
 
 
-// TASK 3: set state.onGround = true when landed, otherwise false.
+// Task 3: Set state.onGround (true on floor, false in air)
 `,
-          python: `# MISSION: land on the floor and stay there.
+          python: `# Goal: Land on floor (world['groundY'] - state['height'])
 gravity = 800.0
-
-# Gravity (done for you). But there is no floor yet,
-# so the player falls forever!
 state['vy'] += gravity * dt
 state['y'] += state['vy'] * dt
 
-# TASK 1: where does the player stand? Make a variable called floor_y
-# equal to world['groundY'] - state['height'].
+# Task 1: floor_y = world['groundY'] - state['height']
 
 
-# TASK 2: if state['y'] has reached floor_y, put the player ON the floor
-# (state['y'] = floor_y) and stop its fall (state['vy'] = 0.0).
+# Task 2: if state['y'] >= floor_y: state['y'] = floor_y; state['vy'] = 0.0
 
 
-# TASK 3: set state['onGround'] = True when landed, otherwise False.
+# Task 3: Set state['onGround'] (True on floor, False in air)
 `,
-          cpp: `// MISSION: land on the floor and stay there.
+          cpp: `// Goal: Land on floor (world.groundY - state.height)
 float gravity = 800.0f;
-
-// Gravity (done for you). But there is no floor yet,
-// so the player falls forever!
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
-// TASK 1: where does the player stand? Make a variable called floorY
-// equal to world.groundY - state.height.
+// Task 1: float floorY = world.groundY - state.height;
 
 
-// TASK 2: if state.y has reached floorY, put the player ON the floor
-// (state.y = floorY) and stop its fall (state.vy = 0.0f).
+// Task 2: if (state.y >= floorY) { state.y = floorY; state.vy = 0.0f; }
 
 
-// TASK 3: set state.onGround = true when landed, otherwise false.
+// Task 3: Set state.onGround (true on floor, false in air)
 `
         }
       },
@@ -331,16 +304,14 @@ state.y += state.vy * dt;
           { speaker: 'mentorB', text: 'Also set state.onGround = false right after you jump, or you could jump again in mid-air!' }
         ],
         code: {
-          javascript: `// MISSION: jump high enough to grab the star.
+          javascript: `// Goal: Jump to collect high star
 const gravity = 800;
-const jumpPower = 300; // TASK 1: tune this number until you reach the star
+const jumpPower = 300; // Task 1: Tune jumpPower (e.g. 380)
 
-// TASK 2: when keys.up is pressed AND the player is on the ground,
-// launch upward: state.vy = -jumpPower, and set state.onGround = false.
-// Hint: on screen, negative y is UP.
+// Task 2: if (keys.up && state.onGround) launch upward (-jumpPower)
 
 
-// Gravity and floor (done for you)
+// Gravity & floor (done)
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
@@ -352,16 +323,14 @@ if (state.y >= floorY) {
 } else {
   state.onGround = false;
 }`,
-          python: `# MISSION: jump high enough to grab the star.
+          python: `# Goal: Jump to collect high star
 gravity = 800.0
-jump_power = 300.0  # TASK 1: tune this number until you reach the star
+jump_power = 300.0  # Task 1: Tune jump_power (e.g. 380.0)
 
-# TASK 2: when keys.up is pressed AND the player is on the ground,
-# launch upward: state['vy'] = -jump_power, and set state['onGround'] = False.
-# Hint: on screen, negative y is UP.
+# Task 2: if keys.up and state['onGround'] launch upward (-jump_power)
 
 
-# Gravity and floor (done for you)
+# Gravity & floor (done)
 state['vy'] += gravity * dt
 state['y'] += state['vy'] * dt
 
@@ -372,16 +341,14 @@ if state['y'] >= floor_y:
     state['onGround'] = True
 else:
     state['onGround'] = False`,
-          cpp: `// MISSION: jump high enough to grab the star.
+          cpp: `// Goal: Jump to collect high star
 float gravity = 800.0f;
-float jumpPower = 300.0f; // TASK 1: tune this number until you reach the star
+float jumpPower = 300.0f; // Task 1: Tune jumpPower (e.g. 380.0f)
 
-// TASK 2: when keys.up is pressed AND the player is on the ground,
-// launch upward: state.vy = -jumpPower, and set state.onGround = false.
-// Hint: on screen, negative y is UP.
+// Task 2: if (keys.up && state.onGround) launch upward (-jumpPower)
 
 
-// Gravity and floor (done for you)
+// Gravity & floor (done)
 state.vy += gravity * dt;
 state.y += state.vy * dt;
 
@@ -414,22 +381,18 @@ if (state.y >= floorY) {
           { speaker: 'mentorB', text: 'Stars too high? Jump while running: the arc carries you sideways. Time your jump early.' }
         ],
         code: {
-          javascript: `// MISSION: collect both stars, then reach the EXIT.
+          javascript: `// Goal: Run & jump to collect 2 stars and reach EXIT
 const moveSpeed = 160;
 const gravity = 800;
 const jumpPower = 380;
 
-// TASK 1: run left and right.
-// If keys.left is pressed, set state.vx = -moveSpeed.
-// Else if keys.right is pressed, set state.vx = moveSpeed.
-// Otherwise stop: state.vx = 0.
+// Task 1: state.vx = keys.left ? -moveSpeed : (keys.right ? moveSpeed : 0);
 
 
-// TASK 2: move sideways.
-// Add state.vx * dt to state.x.
+// Task 2: state.x += state.vx * dt;
 
 
-// Jump, gravity and floor (done for you)
+// Jump, gravity & floor (done)
 if (keys.up && state.onGround) {
   state.vy = -jumpPower;
   state.onGround = false;
@@ -447,24 +410,19 @@ if (state.y >= floorY) {
   state.onGround = false;
 }
 
-// Keep inside canvas walls (done for you)
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
-          python: `# MISSION: collect both stars, then reach the EXIT.
+          python: `# Goal: Run & jump to collect 2 stars and reach EXIT
 move_speed = 160.0
 gravity = 800.0
 jump_power = 380.0
 
-# TASK 1: run left and right.
-# If keys.left is pressed, set state['vx'] = -move_speed.
-# Else if keys.right is pressed, set state['vx'] = move_speed.
-# Otherwise stop: state['vx'] = 0.0.
+# Task 1: state['vx'] = -move_speed if keys.left else (move_speed if keys.right else 0.0)
 
 
-# TASK 2: move sideways.
-# Add state['vx'] * dt to state['x'].
+# Task 2: state['x'] += state['vx'] * dt
 
 
-# Jump, gravity and floor (done for you)
+# Jump, gravity & floor (done)
 if keys.up and state['onGround']:
     state['vy'] = -jump_power
     state['onGround'] = False
@@ -480,24 +438,19 @@ if state['y'] >= floor_y:
 else:
     state['onGround'] = False
 
-# Keep inside canvas walls (done for you)
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))`,
-          cpp: `// MISSION: collect both stars, then reach the EXIT.
+          cpp: `// Goal: Run & jump to collect 2 stars and reach EXIT
 float moveSpeed = 160.0f;
 float gravity = 800.0f;
 float jumpPower = 380.0f;
 
-// TASK 1: run left and right.
-// If keys.left is pressed, set state.vx = -moveSpeed.
-// Else if keys.right is pressed, set state.vx = moveSpeed.
-// Otherwise stop: state.vx = 0.0f.
+// Task 1: if (keys.left) state.vx = -moveSpeed; else if (keys.right) state.vx = moveSpeed; else state.vx = 0.0f;
 
 
-// TASK 2: move sideways.
-// Add state.vx * dt to state.x.
+// Task 2: state.x += state.vx * dt;
 
 
-// Jump, gravity and floor (done for you)
+// Jump, gravity & floor (done)
 if (keys.up && state.onGround) {
   state.vy = -jumpPower;
   state.onGround = false;
@@ -515,7 +468,6 @@ if (state.y >= floorY) {
   state.onGround = false;
 }
 
-// Keep inside canvas walls (done for you)
 state.x = std::clamp(state.x, 0.0f, world.width - state.width);`
         }
       }
@@ -540,10 +492,8 @@ state.x = std::clamp(state.x, 0.0f, world.width - state.width);`
       { speaker: 'mentorB', text: 'AABB collision tests horizontal and vertical axes independently to stop movement dead against the box.', trigger: 'onEnter' }
     ],
     code: {
-      javascript: `// 1. Define the platform collision box: [x, y, width, height]
-// You have full control! Adjust these numbers to reposition or resize the platform box.
+      javascript: `// Platform box [x, y, w, h] and floor
 world.platform = { x: 250, y: 170, w: 120, h: 20 };
-// Floor line is at y = 240. With player height = 22, standing on the floor is at y = 240 - 22 = 218.
 world.groundY = 240;
 
 const speed = 160;
@@ -604,9 +554,7 @@ if (state.y >= groundY) {
 }
 
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));`,
-      python: `# Python Solid AABB Platform Collision
-# 1. Define the platform collision box: [x, y, width, height]
-# You have full control! Adjust these values to reposition or resize the box.
+      python: `# Platform box [x, y, w, h] and floor
 world['platform'] = {'x': 250, 'y': 170, 'w': 120, 'h': 20}
 world['groundY'] = 240
 
@@ -664,9 +612,7 @@ if state['y'] >= ground_y:
     state['y'] = ground_y
     state['vy'] = 0.0
     state['onGround'] = True`,
-      cpp: `// C++ Solid AABB Collision Resolution
-// 1. Define the platform collision box: [x, y, width, height]
-// You have full control! Adjust these values to reposition or resize the box.
+      cpp: `// Platform box [x, y, w, h] and floor
 world.platform = { x: 250.0f, y: 170.0f, w: 120.0f, h: 20.0f };
 world.groundY = 240.0f;
 
@@ -733,8 +679,7 @@ if (!hitsY) {
       { speaker: 'mentorB', text: 'Tip: You can change enemySpeed or initial position in your code to tune the challenge!', trigger: 'onEnter' }
     ],
     code: {
-      javascript: `// 1. Environment & Enemy AI Configuration
-// You have full control! Adjust enemySpeed or coordinates.
+      javascript: `// Setup arena & enemy AI
 world.width = 480;
 world.height = 280;
 
@@ -754,15 +699,14 @@ if (keys.down)  state.y += speed * dt;
 state.x = Math.max(0, Math.min(world.width - state.width, state.x));
 state.y = Math.max(0, Math.min(world.height - state.height, state.y));
 
-// 2. Steer the red enemy orb toward the player position
+// Steer red orb toward player
 const dx = state.x - state.enemyX;
 const dy = state.y - state.enemyY;
 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
 state.enemyX += (dx / dist) * enemySpeed * dt;
 state.enemyY += (dy / dist) * enemySpeed * dt;`,
-      python: `# Python Chase AI Vector Steering
-# 1. Environment & Enemy Configuration
+      python: `# Setup arena & enemy AI
 world['width'] = 480
 world['height'] = 280
 
@@ -785,15 +729,14 @@ if keys.down:
 state['x'] = max(0, min(world['width'] - state['width'], state['x']))
 state['y'] = max(0, min(world['height'] - state['height'], state['y']))
 
-# 2. Vector steering toward player
+# Steer red orb toward player
 dx = state['x'] - state['enemyX']
 dy = state['y'] - state['enemyY']
 dist = (dx * dx + dy * dy) ** 0.5 or 1.0
 
 state['enemyX'] += (dx / dist) * enemy_speed * dt
 state['enemyY'] += (dy / dist) * enemy_speed * dt`,
-      cpp: `// C++ Vector Chase AI
-// 1. Environment & Enemy Configuration
+      cpp: `// Setup arena & enemy AI
 world.width = 480.0f;
 world.height = 280.0f;
 
@@ -813,7 +756,7 @@ if (keys.down)  state.y += speed * dt;
 state.x = std::clamp(state.x, 0.0f, world.width - state.width);
 state.y = std::clamp(state.y, 0.0f, world.height - state.height);
 
-// 2. Vector steering toward player
+// Steer red orb toward player
 float dx = state.x - state.enemyX;
 float dy = state.y - state.enemyY;
 float dist = std::sqrt(dx * dx + dy * dy);
