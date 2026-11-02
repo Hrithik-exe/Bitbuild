@@ -1,13 +1,18 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
-import { AnimatedRoutes } from './components/AnimatedRoutes'
+import { App } from './App'
+import { HomePage } from './pages/HomePage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <AnimatedRoutes />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/app" element={<App />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   </StrictMode>,
 )
