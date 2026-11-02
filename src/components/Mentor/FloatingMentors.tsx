@@ -12,6 +12,11 @@ interface FloatingMentorsProps {
   hasPrevLesson?: boolean;
   nextLessonLabel?: string;
   prevLessonLabel?: string;
+  pixelOpen?: boolean;
+  byteOpen?: boolean;
+  onTogglePixel?: () => void;
+  onToggleByte?: () => void;
+  hideAvatars?: boolean;
 }
 
 export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
@@ -21,7 +26,12 @@ export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
   hasNextLesson = false,
   hasPrevLesson = false,
   nextLessonLabel = '',
-  prevLessonLabel = ''
+  prevLessonLabel = '',
+  pixelOpen: controlledPixelOpen,
+  byteOpen: controlledByteOpen,
+  onTogglePixel,
+  onToggleByte,
+  hideAvatars = false
 }) => {
   // Separate lines for Pixel (mentorA) and Byte (mentorB)
   const pixelLines = useMemo(
@@ -43,9 +53,22 @@ export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
     [byteLines]
   );
 
-  // Balloon open states
-  const [pixelOpen, setPixelOpen] = useState(false);
-  const [byteOpen, setByteOpen] = useState(false);
+  // Internal state fallback if not controlled
+  const [internalPixelOpen, setInternalPixelOpen] = useState(false);
+  const [internalByteOpen, setInternalByteOpen] = useState(false);
+
+  const pixelOpen = controlledPixelOpen !== undefined ? controlledPixelOpen : internalPixelOpen;
+  const byteOpen = controlledByteOpen !== undefined ? controlledByteOpen : internalByteOpen;
+
+  const togglePixel = () => {
+    if (onTogglePixel) onTogglePixel();
+    else setInternalPixelOpen(prev => !prev);
+  };
+
+  const toggleByte = () => {
+    if (onToggleByte) onToggleByte();
+    else setInternalByteOpen(prev => !prev);
+  };
 
   // Tip indices
   const [pixelIdx, setPixelIdx] = useState(0);
@@ -62,11 +85,11 @@ export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
 
     const firstLine = dialogueLines[0];
     if (firstLine && firstLine.speaker === 'mentorB') {
-      setByteOpen(true);
-      setPixelOpen(false);
+      setInternalByteOpen(true);
+      setInternalPixelOpen(false);
     } else {
-      setPixelOpen(true);
-      setByteOpen(false);
+      setInternalPixelOpen(true);
+      setInternalByteOpen(false);
     }
   }, [dialogueLines]);
 
@@ -143,33 +166,35 @@ export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
   };
 
   return (
-    <div className="floating-mentors-anchor" aria-label="Mentor companions">
+    <div className={`floating-mentors-anchor ${hideAvatars ? 'avatars-hidden' : ''}`} aria-label="Mentor companions">
       {/* ── PIXEL (Top-Left Floating Character) ── */}
       <div className={`mentor-float-wrapper float-left ${pixelOpen ? 'is-speaking' : ''}`}>
-        <button
-          type="button"
-          className="mentor-avatar-btn pixel-avatar-btn"
-          onClick={() => setPixelOpen(prev => !prev)}
-          title={pixelOpen ? 'Click to minimize Pixel' : 'Click to talk to Pixel!'}
-          aria-expanded={pixelOpen}
-        >
-          <div className="character-halo pixel-halo" />
-          <div className="character-bob pixel-bob">
-            <div className="avatar-head pixel-head">
-              <Bot size={18} className="avatar-icon pixel-icon" />
-              <div className="antenna-glow" />
+        {!hideAvatars && (
+          <button
+            type="button"
+            className="mentor-avatar-btn pixel-avatar-btn"
+            onClick={togglePixel}
+            title={pixelOpen ? 'Click to minimize Pixel' : 'Click to talk to Pixel!'}
+            aria-expanded={pixelOpen}
+          >
+            <div className="character-halo pixel-halo" />
+            <div className="character-bob pixel-bob">
+              <div className="avatar-head pixel-head">
+                <Bot size={18} className="avatar-icon pixel-icon" />
+                <div className="antenna-glow" />
+              </div>
+              <div className="avatar-nametag pixel-tag">
+                <span>PIXEL</span>
+              </div>
             </div>
-            <div className="avatar-nametag pixel-tag">
-              <span>PIXEL</span>
-            </div>
-          </div>
-          {!pixelOpen && (
-            <div className="mentor-alert-pill pixel-alert">
-              <MessageSquare size={10} />
-              <span>Tip</span>
-            </div>
-          )}
-        </button>
+            {!pixelOpen && (
+              <div className="mentor-alert-pill pixel-alert">
+                <MessageSquare size={10} />
+                <span>Tip</span>
+              </div>
+            )}
+          </button>
+        )}
 
         {/* Pixel's Comic Speech Bubble */}
         {pixelOpen && (
@@ -186,7 +211,7 @@ export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
               <button
                 type="button"
                 className="comic-close-btn"
-                onClick={(e) => { e.stopPropagation(); setPixelOpen(false); }}
+                onClick={(e) => { e.stopPropagation(); togglePixel(); }}
                 title="Minimize speech bubble"
               >
                 <X size={13} />
@@ -249,30 +274,32 @@ export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
 
       {/* ── BYTE (Top-Right Floating Character) ── */}
       <div className={`mentor-float-wrapper float-right ${byteOpen ? 'is-speaking' : ''}`}>
-        <button
-          type="button"
-          className="mentor-avatar-btn byte-avatar-btn"
-          onClick={() => setByteOpen(prev => !prev)}
-          title={byteOpen ? 'Click to minimize Byte' : 'Click to talk to Byte!'}
-          aria-expanded={byteOpen}
-        >
-          <div className="character-halo byte-halo" />
-          <div className="character-bob byte-bob">
-            <div className="avatar-head byte-head">
-              <Terminal size={18} className="avatar-icon byte-icon" />
-              <div className="antenna-glow byte-glow" />
+        {!hideAvatars && (
+          <button
+            type="button"
+            className="mentor-avatar-btn byte-avatar-btn"
+            onClick={toggleByte}
+            title={byteOpen ? 'Click to minimize Byte' : 'Click to talk to Byte!'}
+            aria-expanded={byteOpen}
+          >
+            <div className="character-halo byte-halo" />
+            <div className="character-bob byte-bob">
+              <div className="avatar-head byte-head">
+                <Terminal size={18} className="avatar-icon byte-icon" />
+                <div className="antenna-glow byte-glow" />
+              </div>
+              <div className="avatar-nametag byte-tag">
+                <span>BYTE</span>
+              </div>
             </div>
-            <div className="avatar-nametag byte-tag">
-              <span>BYTE</span>
-            </div>
-          </div>
-          {!byteOpen && (
-            <div className="mentor-alert-pill byte-alert">
-              <MessageSquare size={10} />
-              <span>Advice</span>
-            </div>
-          )}
-        </button>
+            {!byteOpen && (
+              <div className="mentor-alert-pill byte-alert">
+                <MessageSquare size={10} />
+                <span>Advice</span>
+              </div>
+            )}
+          </button>
+        )}
 
         {/* Byte's Comic Speech Bubble */}
         {byteOpen && (
@@ -289,7 +316,7 @@ export const FloatingMentors: React.FC<FloatingMentorsProps> = ({
               <button
                 type="button"
                 className="comic-close-btn"
-                onClick={(e) => { e.stopPropagation(); setByteOpen(false); }}
+                onClick={(e) => { e.stopPropagation(); toggleByte(); }}
                 title="Minimize speech bubble"
               >
                 <X size={13} />

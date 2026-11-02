@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import confetti from 'canvas-confetti';
+import { Play, RotateCcw, Maximize2, Minimize2, Crosshair, Activity, Monitor, Terminal, Trash2 } from 'lucide-react';
 import type { ReadoutData, PlayerState, WorldConfig } from '../../types/lesson';
 import { blipAudio } from '../../services/BlipAudio';
 import { MissionTracker } from '../../missions/missionData';
@@ -12,6 +13,7 @@ interface GameCanvasProps {
   onSuccess?: () => void;
   /** Called with the ids of finished mission tasks whenever they change ([] on restart). */
   onMissionProgress?: (doneIds: string[]) => void;
+  engineStatus?: string;
 }
 
 interface DebrisParticle {
@@ -65,16 +67,40 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   isError,
   lessonId,
   onSuccess,
-  onMissionProgress
+  onMissionProgress,
+  engineStatus = 'V8 JavaScript'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [coordMode, setCoordMode] = useState<'screen' | 'math'>('math');
-  const [showCoordExplainer, setShowCoordExplainer] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const coordModeRef = useRef<'screen' | 'math'>('math');
   coordModeRef.current = coordMode;
 
-  const [readout, setReadout] = useState<ReadoutData>({ x: 40, y: 0, vx: 0, vy: 0, fps: 60 });
+  const [readout, setReadout] = useState<ReadoutData>({ x: 60, y: 60, vx: 0, vy: 0, fps: 60 });
   const [isGameOver, setIsGameOver] = useState(false);
+
+  const [consoleLines, setConsoleLines] = useState<string[]>([
+    `Running simulation (${engineStatus}) - use arrow keys or WASD / Space`
+  ]);
+
+  useEffect(() => {
+    if (isError && statusMessage) {
+      setConsoleLines([statusMessage]);
+    } else {
+      setConsoleLines([`Running simulation (${engineStatus}) - use arrow keys or WASD / Space`]);
+    }
+  }, [isError, statusMessage, engineStatus]);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      panelRef.current?.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
 
   // Initialize World Config with entities driven dynamically by user code
   const initWorld = useCallback((currentLessonId: string): WorldConfig => {
@@ -846,73 +872,58 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   }, [updateFn, lessonId, onSuccess, triggerDeath, respawn]);
 
   return (
-    <div className="panel canvas-panel">
-      <div className="panel-head">
-        <div className="label">
-          <span>simulation canvas</span>
+    <div className="panel canvas-panel" ref={panelRef}>
+      {/* Simulation Canvas Top Header matching Screenshot */}
+      <div className="panel-head sim-canvas-header">
+        <div className="sim-title-group">
+          <Play size={13} fill="currentColor" className="sim-play-icon" />
+          <span className="sim-title-text">Simulation Canvas</span>
         </div>
 
-        {/* Coordinate Mode Toggle (Math Cartesian vs Screen Raster) - only when ground physics is used */}
-        {!['move', 'gravity', 'gravity-1'].includes(lessonId) && (
-          <div className="canvas-header-controls">
-            <div className="coord-mode-selector">
+        <div className="sim-head-actions">
+          {/* Minimal Coordinate Mode Toggle */}
+          {!['move', 'gravity', 'gravity-1'].includes(lessonId) && (
+            <div className="sim-coord-toggle">
               <button
                 type="button"
-                className={`coord-btn ${coordMode === 'math' ? 'active' : ''}`}
+                className={`coord-mini-btn ${coordMode === 'math' ? 'active' : ''}`}
                 onClick={() => setCoordMode('math')}
-                title="Cartesian Math Mode: Ground = 0, +Y is UP"
+                title="Cartesian Math Mode (+Y Up)"
               >
-                📐 Math (+Y Up)
+                📐 Math
               </button>
               <button
                 type="button"
-                className={`coord-btn ${coordMode === 'screen' ? 'active' : ''}`}
+                className={`coord-mini-btn ${coordMode === 'screen' ? 'active' : ''}`}
                 onClick={() => setCoordMode('screen')}
-                title="Screen / Raster Mode: Roof = 0, +Y is DOWN"
+                title="Screen Mode (+Y Down)"
               >
-                🖥️ Screen (+Y Down)
+                🖥 Screen
               </button>
             </div>
-            <button
-              type="button"
-              className="coord-info-btn"
-              onClick={() => setShowCoordExplainer(prev => !prev)}
-              title="Learn why 2D graphics traditionally use Roof = 0"
-            >
-              ?
-            </button>
-          </div>
-        )}
-
-        <div className="keys-hint">
-          <span className="key">← → ↑ ↓</span>
-          <span className="key">WASD</span>
-          {['gravity-3', 'gravity-4', 'collision', 'chase', 'capstone'].includes(lessonId) && (
-            <span className="key">Space: Jump</span>
           )}
+
+          <button
+            type="button"
+            className="sim-action-btn"
+            onClick={respawn}
+            title="Restart Canvas Simulation"
+          >
+            <RotateCcw size={13} />
+          </button>
+
+          <button
+            type="button"
+            className="sim-action-btn"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Canvas'}
+          >
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
         </div>
       </div>
 
       <div className="sim-body">
-        {/* Educational Coordinate System Explainer Dropdown */}
-        {showCoordExplainer && (
-          <div className="coord-explainer-card">
-            <div className="coord-explainer-header">
-              <span className="coord-explainer-title">📐 Why does 2D Computer Graphics use Roof = 0?</span>
-              <button type="button" className="coord-explainer-close" onClick={() => setShowCoordExplainer(false)}>✕</button>
-            </div>
-            <p>
-              In <strong>Mathematics & Physics (Cartesian)</strong>, <code>(0,0)</code> is at the ground level and <code>+Y</code> points <strong>UP</strong>.
-            </p>
-            <p>
-              In <strong>2D Computer Graphics (HTML5 Canvas, Pygame, Godot 2D)</strong>, <code>(0,0)</code> is at the top-left ceiling (roof) and <code>+Y</code> points <strong>DOWN</strong>. This originated from cathode-ray tube (CRT) television monitors scanning pixels row-by-row from top to bottom!
-            </p>
-            <p className="coord-explainer-tip">
-              💡 <strong>BitBuild Feature:</strong> Toggle between <strong>Math Mode</strong> (Ground = 0, +Y Up) and <strong>Screen Mode</strong> (Roof = 0, +Y Down) above to see both perspectives live!
-            </p>
-          </div>
-        )}
-
         <div className="canvas-container">
           <canvas
             ref={canvasRef}
@@ -941,31 +952,58 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           )}
         </div>
 
-        <div className="readout">
-          <span>
-            x <b className="val-teal">{readout.x}</b>
-          </span>
-          <span>
-            y <b className="val-teal">{readout.y}</b>{' '}
-            {!['move', 'gravity', 'gravity-1'].includes(lessonId) && (
-              <span style={{ fontSize: '10px', opacity: 0.7 }}>
-                {coordMode === 'math' ? '(altitude ↑)' : '(screen ↓)'}
-              </span>
-            )}
-          </span>
-          <span>
-            vx <b className="val-teal">{readout.vx}</b>
-          </span>
-          <span>
-            vy <b className="val-teal">{readout.vy}</b>
-          </span>
-          <span>
-            fps <b className="val-teal">{readout.fps}</b>
-          </span>
+        {/* Telemetry Strip directly below canvas matching Screenshot */}
+        <div className="sim-telemetry-strip">
+          <div className="telemetry-cell">
+            <Crosshair size={12} className="tel-icon" />
+            <span>x <b className="val-cyan">{readout.x}</b></span>
+            <span>y <b className="val-cyan">{readout.y}</b></span>
+          </div>
+
+          <div className="telemetry-cell">
+            <Activity size={12} className="tel-icon" />
+            <span>vx <b className="val-cyan">{readout.vx}</b></span>
+            <span>vy <b className="val-cyan">{readout.vy}</b></span>
+          </div>
+
+          <div className="telemetry-cell">
+            <Monitor size={12} className="tel-icon" />
+            <span>fps <b className="val-cyan">{readout.fps}</b></span>
+          </div>
         </div>
 
-        <div className={`status ${isGameOver ? 'err' : isError ? 'err' : ''}`}>
-          {isGameOver ? '☠ SIGNAL LOST — Caught by enemy dot! Press [SPACE] or click canvas to retry.' : statusMessage}
+        {/* Simulation Output Console matching Screenshot */}
+        <div className="sim-output-console">
+          <div className="sim-output-head">
+            <div className="sim-output-label">
+              <Terminal size={12} className="terminal-prompt-icon" />
+              <span>Simulation Output</span>
+            </div>
+            <button
+              type="button"
+              className="sim-clear-btn"
+              onClick={() => setConsoleLines([])}
+              title="Clear output console"
+            >
+              <Trash2 size={11} />
+              <span>Clear</span>
+            </button>
+          </div>
+
+          <div className="sim-output-scroll">
+            {consoleLines.length === 0 ? (
+              <div className="sim-console-empty">Output console cleared.</div>
+            ) : (
+              consoleLines.map((line, idx) => (
+                <div
+                  key={idx}
+                  className={`sim-console-line ${isError ? 'line-error' : isGameOver ? 'line-warning' : 'line-green'}`}
+                >
+                  {line}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

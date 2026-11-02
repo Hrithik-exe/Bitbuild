@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EditorState, StateField, StateEffect, RangeSet } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightActiveLine, Decoration, type DecorationSet, gutter, GutterMarker } from '@codemirror/view';
 import { defaultKeymap, indentWithTab } from '@codemirror/commands';
@@ -6,16 +6,17 @@ import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { cpp } from '@codemirror/lang-cpp';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { Play, RotateCcw, FileCode, AlertCircle, Cpu } from 'lucide-react';
+import { FileCode, AlertCircle, Cpu, ChevronDown } from 'lucide-react';
 import type { Language, ErrorLineInfo, DialogueLine } from '../../types/lesson';
 import { FloatingMentors } from '../Mentor/FloatingMentors';
 
 interface CodeEditorProps {
   code: string;
   onChange: (value: string) => void;
-  onRun: () => void;
-  onReset: () => void;
+  onRun?: () => void;
+  onReset?: () => void;
   language: Language;
+  onLanguageChange?: (lang: Language) => void;
   filename?: string;
   hasError?: boolean;
   errorInfo?: ErrorLineInfo | null;
@@ -102,8 +103,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   code,
   onChange,
   onRun,
-  onReset,
+  onReset: _onReset,
   language,
+  onLanguageChange,
   filename = 'update.js',
   hasError = false,
   errorInfo = null,
@@ -118,6 +120,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 }) => {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const [pixelOpen, setPixelOpen] = useState(false);
+  const [byteOpen, setByteOpen] = useState(false);
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!editorContainerRef.current) return;
@@ -144,7 +149,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         getLangExtension(),
         errorField,
         errorGutter,
-        keymap.of([...defaultKeymap, indentWithTab]),
+        keymap.of([
+          ...defaultKeymap,
+          indentWithTab,
+          {
+            key: 'Mod-Enter',
+            run: () => {
+              if (onRun) onRun();
+              return true;
+            }
+          }
+        ]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChange(update.state.doc.toString());
@@ -243,7 +258,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   return (
     <div className={`panel editor-panel ${hasError ? 'border-error' : ''}`}>
-      {/* Floating Mentor Characters in Top Corners */}
+      {/* Floating Mentor Balloons anchored to Toolbar Buttons */}
       {dialogueLines && dialogueLines.length > 0 && (
         <FloatingMentors
           dialogueLines={dialogueLines}
@@ -253,20 +268,106 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           hasPrevLesson={hasPrevLesson}
           nextLessonLabel={nextLessonLabel}
           prevLessonLabel={prevLessonLabel}
+          pixelOpen={pixelOpen}
+          byteOpen={byteOpen}
+          onTogglePixel={() => {
+            setPixelOpen(prev => !prev);
+            if (!pixelOpen) setByteOpen(false);
+          }}
+          onToggleByte={() => {
+            setByteOpen(prev => !prev);
+            if (!byteOpen) setPixelOpen(false);
+          }}
+          hideAvatars={true}
         />
       )}
 
+      {/* Modern Space-Efficient Header Toolbar */}
       <div className="panel-head editor-panel-head">
-        <div className="label">
-          <FileCode size={14} className="accent-icon" />
-          <span>{filename}</span>
-        </div>
-        {engineStatus && (
-          <div className="engine-status-pill" title="Execution Engine">
-            <Cpu size={12} />
-            <span>{engineStatus}</span>
+        <div className="editor-tab-group">
+          <div className="editor-tab is-active" title="Active Code File">
+            <FileCode size={13} className="tab-icon" />
+            <span className="tab-filename">{filename}</span>
+            <span className="tab-close-icon">×</span>
           </div>
-        )}
+          <button type="button" className="editor-tab-add" title="Add File">+</button>
+        </div>
+
+        <div className="editor-head-controls">
+          {/* Engine Status / Language Dropdown */}
+          <div className="engine-status-wrapper">
+            <button
+              type="button"
+              className="engine-status-pill"
+              onClick={() => setIsLangDropdownOpen(prev => !prev)}
+              title="Change Execution Engine / Language"
+            >
+              <Cpu size={12} className="engine-icon" />
+              <span>{engineStatus || (language === 'python' ? 'Pyodide Python' : language === 'cpp' ? 'C++ Engine' : 'V8 JavaScript')}</span>
+              <ChevronDown size={11} className="engine-chevron" />
+            </button>
+
+            {isLangDropdownOpen && onLanguageChange && (
+              <div className="lang-menu-dropdown">
+                <button
+                  type="button"
+                  className={`lang-option ${language === 'javascript' ? 'active' : ''}`}
+                  onClick={() => {
+                    onLanguageChange('javascript');
+                    setIsLangDropdownOpen(false);
+                  }}
+                >
+                  V8 JavaScript (.js)
+                </button>
+                <button
+                  type="button"
+                  className={`lang-option ${language === 'python' ? 'active' : ''}`}
+                  onClick={() => {
+                    onLanguageChange('python');
+                    setIsLangDropdownOpen(false);
+                  }}
+                >
+                  Pyodide Python (.py)
+                </button>
+                <button
+                  type="button"
+                  className={`lang-option ${language === 'cpp' ? 'active' : ''}`}
+                  onClick={() => {
+                    onLanguageChange('cpp');
+                    setIsLangDropdownOpen(false);
+                  }}
+                >
+                  C++ Engine (.cpp)
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Mentor Action Pills matching Screenshot */}
+          <button
+            type="button"
+            className={`mentor-pill-btn pixel-pill ${pixelOpen ? 'active' : ''}`}
+            onClick={() => {
+              setPixelOpen(prev => !prev);
+              if (!pixelOpen) setByteOpen(false);
+            }}
+            title="Ask Pixel (Game Physics Mentor)"
+          >
+            PIXEL
+          </button>
+
+          <button
+            type="button"
+            className={`mentor-pill-btn byte-pill ${byteOpen ? 'active' : ''}`}
+            onClick={() => {
+              setByteOpen(prev => !prev);
+              if (!byteOpen) setPixelOpen(false);
+            }}
+            title="Ask Byte (Systems & AI Mentor)"
+          >
+            BYTE
+          </button>
+        </div>
       </div>
 
       <div className="editor-wrapper" ref={editorContainerRef} />
@@ -279,18 +380,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           <span className="error-jump">Click to jump ↵</span>
         </div>
       )}
-
-      <div className="btn-row">
-        <button className="btn-run" onClick={onRun}>
-          <Play size={14} fill="currentColor" />
-          <span>Run ▶</span>
-        </button>
-
-        <button className="btn-reset" onClick={onReset}>
-          <RotateCcw size={13} />
-          <span>Reset</span>
-        </button>
-      </div>
     </div>
   );
 };

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RotateCcw, Play, Lightbulb } from 'lucide-react';
 import { Header } from './components/Header';
 import { CodeEditor } from './components/Editor/CodeEditor';
 import { GameCanvas } from './components/Canvas/GameCanvas';
-import { MissionPanel } from './missions/MissionPanel';
+import { MissionTopBar } from './missions/MissionTopBar';
 import { getMission } from './missions/missionData';
 import { SkillTree } from './components/SkillTree';
 import { BugExplainModal } from './components/BugExplainModal';
@@ -33,6 +34,8 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [engineStatus, setEngineStatus] = useState<string>('V8 JavaScript');
   const [updateFn, setUpdateFn] = useState<((state: Record<string, unknown>, keys: Record<string, boolean>, dt: number, world: Record<string, unknown>) => void) | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [showDetailedHint, setShowDetailedHint] = useState(false);
 
   // Synchronize authentication and persistent progress on mount.
   // Gated route: Users cannot enter without logging in.
@@ -429,52 +432,107 @@ export function App() {
             </div>
           )}
 
-          {/* 3-Column 1:1:1 Split Workspace: Tasks, Code, Simulation */}
-          <div className="mission-layout">
-            <MissionPanel
-              lessonId={activeSimId}
-              doneIds={missionDone}
-              rewardXp={activePiece && currentPieceIndex < (currentLesson.pieces?.length ?? 0) - 1 ? 25 : currentLesson.xp}
-              hasNext={hasNext}
-              nextLabel={nextLabel}
-              onNext={goToNextStep}
-            />
+          {/* Space-Efficient 2-Column Split Workspace with Top Quest Bar & Bottom Tip */}
+          {(() => {
+            const activeMission = getMission(activeSimId);
+            const currentActiveTask = selectedTaskId
+              ? activeMission?.tasks.find(t => t.id === selectedTaskId)
+              : activeMission?.tasks.find(t => !missionDone.includes(t.id)) || activeMission?.tasks[0];
+            const defaultTip = currentActiveTask?.detail || "Use state.x and state.y to move the player.";
+            const displayTip = showDetailedHint && currentActiveTask?.hint ? currentActiveTask.hint : defaultTip;
 
-            <CodeEditor
-              code={code}
-              onChange={(newCode) => {
-                setCode(newCode);
-                if (errorInfo) setErrorInfo(null);
-              }}
-              onRun={compileAndRun}
-              onReset={handleReset}
-              language={language}
-              filename={language === 'python' ? 'update.py' : language === 'cpp' ? 'update.cpp' : 'update.js'}
-              hasError={isError}
-              errorInfo={errorInfo}
-              engineStatus={engineStatus}
-              dialogueLines={activeMentorLines}
-              onNextLesson={goToNextStep}
-              onPrevLesson={goToPrevStep}
-              hasNextLesson={hasNext}
-              hasPrevLesson={hasPrev}
-              nextLessonLabel={nextLabel}
-              prevLessonLabel={prevLabel}
-            />
+            return (
+              <div className="mission-workspace">
+                <MissionTopBar
+                  lessonId={activeSimId}
+                  doneIds={missionDone}
+                  rewardXp={activePiece && currentPieceIndex < (currentLesson.pieces?.length ?? 0) - 1 ? 25 : currentLesson.xp}
+                  hasNext={hasNext}
+                  nextLabel={nextLabel}
+                  onNext={goToNextStep}
+                  activeTaskId={selectedTaskId}
+                  onSelectTask={(id) => setSelectedTaskId(prev => prev === id ? null : id)}
+                />
 
-            <GameCanvas
-              updateFn={updateFn}
-              statusMessage={statusMessage}
-              isError={isError}
-              lessonId={activeSimId}
-              onMissionProgress={handleMissionProgress}
-              onSuccess={
-                currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1
-                  ? handlePieceSuccess
-                  : handleLessonSuccess
-              }
-            />
-          </div>
+                <div className="ms-main-columns">
+                  <CodeEditor
+                    code={code}
+                    onChange={(newCode) => {
+                      setCode(newCode);
+                      if (errorInfo) setErrorInfo(null);
+                    }}
+                    onRun={compileAndRun}
+                    onReset={handleReset}
+                    language={language}
+                    onLanguageChange={(newLang) => {
+                      setLanguage(newLang);
+                      const newCode = currentLesson.code[newLang] || currentLesson.code.javascript;
+                      setCode(newCode);
+                    }}
+                    filename={language === 'python' ? 'update.py' : language === 'cpp' ? 'update.cpp' : 'update.js'}
+                    hasError={isError}
+                    errorInfo={errorInfo}
+                    engineStatus={engineStatus}
+                    dialogueLines={activeMentorLines}
+                    onNextLesson={goToNextStep}
+                    onPrevLesson={goToPrevStep}
+                    hasNextLesson={hasNext}
+                    hasPrevLesson={hasPrev}
+                    nextLessonLabel={nextLabel}
+                    prevLessonLabel={prevLabel}
+                  />
+
+                  <GameCanvas
+                    updateFn={updateFn}
+                    statusMessage={statusMessage}
+                    isError={isError}
+                    lessonId={activeSimId}
+                    engineStatus={engineStatus}
+                    onMissionProgress={handleMissionProgress}
+                    onSuccess={
+                      currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1
+                        ? handlePieceSuccess
+                        : handleLessonSuccess
+                    }
+                  />
+                </div>
+
+                <footer className="ms-bottom-bar">
+                  <div className="bottom-bar-actions">
+                    <button
+                      type="button"
+                      className="btn-bottom-reset"
+                      onClick={handleReset}
+                      title="Reset code to original starter template"
+                    >
+                      <RotateCcw size={13} />
+                      <span>Reset</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-bottom-run"
+                      onClick={compileAndRun}
+                      title="Run Code Simulation (Ctrl+Enter)"
+                    >
+                      <Play size={13} fill="currentColor" />
+                      <span>Run ▶</span>
+                    </button>
+                  </div>
+
+                  <div
+                    className="bottom-bar-tip"
+                    onClick={() => setShowDetailedHint(prev => !prev)}
+                    title="Click to toggle code hint"
+                  >
+                    <Lightbulb size={14} className="tip-bulb" />
+                    <span className="tip-text">
+                      <strong>Tip:</strong> {displayTip}
+                    </span>
+                  </div>
+                </footer>
+              </div>
+            );
+          })()}
         </div>
       )}
 
