@@ -110,3 +110,4 @@ export const MissionTopBar: React.FC<MissionTopBarProps> = ({
     </header>
   );
 };
+
