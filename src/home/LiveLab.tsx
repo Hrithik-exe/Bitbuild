@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CodeEditor } from '../components/Editor/CodeEditor';
 import { GameCanvas } from '../components/Canvas/GameCanvas';
 import { PythonRunnerService } from '../services/PythonRunner';
+import { MissionPanel } from '../missions/MissionPanel';
 import { lessons } from '../data/lessons';
 import type { ErrorLineInfo } from '../types/lesson';
 
@@ -19,6 +20,7 @@ export default function LiveLab() {
   const [updateFn, setUpdateFn] = useState<UpdateFn | null>(null);
   const [errorInfo, setErrorInfo] = useState<ErrorLineInfo | null>(null);
   const [isError, setIsError] = useState(false);
+  const [missionDone, setMissionDone] = useState<string[]>([]);
   const [status, setStatus] = useState('Press Run, then use arrow keys or WASD');
 
   const compile = useCallback((src: string) => {
@@ -48,6 +50,8 @@ export default function LiveLab() {
   }, [compile, lesson]);
 
   return (
+    <div className="mission-layout">
+    <MissionPanel lessonId={lesson.id} doneIds={missionDone} rewardXp={lesson.xp} />
     <div className="grid">
       <CodeEditor
         code={code}
@@ -66,7 +70,8 @@ export default function LiveLab() {
         errorInfo={errorInfo}
         engineStatus="V8 JavaScript"
       />
-      <GameCanvas updateFn={updateFn} statusMessage={status} isError={isError} lessonId={lesson.id} />
+      <GameCanvas updateFn={updateFn} statusMessage={status} isError={isError} lessonId={lesson.id} onMissionProgress={setMissionDone} />
+    </div>
     </div>
   );
 }

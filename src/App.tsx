@@ -5,6 +5,8 @@ import { CodeEditor } from './components/Editor/CodeEditor';
 import { GameCanvas } from './components/Canvas/GameCanvas';
 import { LessonNote } from './components/LessonNote';
 import { MentorBox } from './components/Mentor/MentorBox';
+import { MissionPanel } from './missions/MissionPanel';
+import { getMission } from './missions/missionData';
 import { SkillTree } from './components/SkillTree';
 import { BugExplainModal } from './components/BugExplainModal';
 import { AuthModal } from './components/Auth/AuthModal';
@@ -182,6 +184,7 @@ export function App() {
 
   // Synchronize starter code & auto-start simulation when lesson, piece, or language changes
   const [currentPieceIndex, setCurrentPieceIndex] = useState(0);
+  const [missionDone, setMissionDone] = useState<string[]>([]);
   const [completedPieceIds, setCompletedPieceIds] = useState<string[]>([]);
 
   // Derive active piece if current lesson has pieces (e.g. Level 2)
@@ -245,6 +248,17 @@ export function App() {
       persistState(updatedXp, completedLessonIds, updatedPieces, currentLesson.id);
     }
   };
+
+  // Mission side panel: tasks tick off as the learner's code does things.
+  // Levels without an engine win condition finish when every task is done.
+  const handleMissionProgress = useCallback((ids: string[]) => {
+    setMissionDone(ids);
+    const m = getMission(activeSimId);
+    if (m && ids.length === m.tasks.length && ['collision', 'chase'].includes(activeSimId)) {
+      handleLessonSuccess();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSimId, completedLessonIds, currentXp, currentLesson]);
 
   // Switch active lesson
   const loadLesson = useCallback((lesson: Lesson) => {
@@ -419,33 +433,44 @@ export function App() {
           )}
 
           {/* 2-Panel Split Grid Workspace */}
-          <div className="grid">
-            <CodeEditor
-              code={code}
-              onChange={(newCode) => {
-                setCode(newCode);
-                if (errorInfo) setErrorInfo(null);
-              }}
-              onRun={compileAndRun}
-              onReset={handleReset}
-              language={language}
-              filename={language === 'python' ? 'update.py' : language === 'cpp' ? 'update.cpp' : 'update.js'}
-              hasError={isError}
-              errorInfo={errorInfo}
-              engineStatus={engineStatus}
-            />
-
-            <GameCanvas
-              updateFn={updateFn}
-              statusMessage={statusMessage}
-              isError={isError}
+          <div className="mission-layout">
+            <MissionPanel
               lessonId={activeSimId}
-              onSuccess={
-                currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1
-                  ? handlePieceSuccess
-                  : handleLessonSuccess
-              }
+              doneIds={missionDone}
+              rewardXp={activePiece && currentPieceIndex < (currentLesson.pieces?.length ?? 0) - 1 ? 25 : currentLesson.xp}
+              hasNext={hasNext}
+              nextLabel={nextLabel}
+              onNext={goToNextStep}
             />
+            <div className="grid">
+              <CodeEditor
+                code={code}
+                onChange={(newCode) => {
+                  setCode(newCode);
+                  if (errorInfo) setErrorInfo(null);
+                }}
+                onRun={compileAndRun}
+                onReset={handleReset}
+                language={language}
+                filename={language === 'python' ? 'update.py' : language === 'cpp' ? 'update.cpp' : 'update.js'}
+                hasError={isError}
+                errorInfo={errorInfo}
+                engineStatus={engineStatus}
+              />
+
+              <GameCanvas
+                updateFn={updateFn}
+                statusMessage={statusMessage}
+                isError={isError}
+                lessonId={activeSimId}
+                onMissionProgress={handleMissionProgress}
+                onSuccess={
+                  currentLesson.pieces && currentPieceIndex < currentLesson.pieces.length - 1
+                    ? handlePieceSuccess
+                    : handleLessonSuccess
+                }
+              />
+            </div>
           </div>
 
           {/* Undertale-style Procedural Mentor Voice Dialogue with Step Navigation */}

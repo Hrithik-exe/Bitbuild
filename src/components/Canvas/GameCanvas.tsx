@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import type { ReadoutData, PlayerState, WorldConfig } from '../../types/lesson';
 import { blipAudio } from '../../services/BlipAudio';
+import { MissionTracker } from '../../missions/missionData';
 
 interface GameCanvasProps {
   updateFn: ((state: Record<string, unknown>, keys: Record<string, boolean>, dt: number, world: Record<string, unknown>) => void) | null;
@@ -9,6 +10,8 @@ interface GameCanvasProps {
   isError: boolean;
   lessonId: string;
   onSuccess?: () => void;
+  /** Called with the ids of finished mission tasks whenever they change ([] on restart). */
+  onMissionProgress?: (doneIds: string[]) => void;
 }
 
 interface DebrisParticle {
@@ -61,7 +64,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   statusMessage,
   isError,
   lessonId,
-  onSuccess
+  onSuccess,
+  onMissionProgress
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [coordMode, setCoordMode] = useState<'screen' | 'math'>('math');
@@ -127,7 +131,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   // Mission progress lives in refs so it survives re-renders of the parent
   const wonRef = useRef(false);
   const stableRef = useRef(0);
-  const seenRef = useRef({ vyPos: false, vyNeg: false, dropped: false, grounded: false, moved: false });
+  const trackerRef = useRef(new MissionTracker());
+  const progressCbRef = useRef(onMissionProgress);
+  progressCbRef.current = onMissionProgress;
   const deathParticlesRef = useRef<DebrisParticle[]>([]);
   const shakeTimeRef = useRef(0);
   const lessonIdRef = useRef(lessonId);
@@ -137,7 +143,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const respawn = useCallback(() => {
     wonRef.current = false;
     stableRef.current = 0;
-    seenRef.current = { vyPos: false, vyNeg: false, dropped: false, grounded: false, moved: false };
+    trackerRef.current.reset(lessonIdRef.current);
+    progressCbRef.current?.([]);
     isGameOverRef.current = false;
     setIsGameOver(false);
     deathParticlesRef.current = [];
@@ -402,17 +409,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           }
         }
 
-        // Track what the learner's code has made happen (drives the task checklist)
-        const seen = seenRef.current;
-        if (typeof state.vy === 'number') {
-          if (state.vy > 1) seen.vyPos = true;
-          if (state.vy < -1) seen.vyNeg = true;
-        }
-        if (state.y > 36) seen.dropped = true;
-        if (Math.abs(state.vx || 0) > 1 || Math.abs(state.x - 40) > 20) seen.moved = true;
         const floorTop = (typeof world.groundY === 'number' && world.groundY > 0 ? world.groundY : 240) - (state.height || 22);
         const standing = state.onGround === true && Math.abs(state.y - floorTop) < 1.5;
-        if (lessonId === 'gravity-2' && standing) seen.grounded = true;
 
         // Win conditions
         const currentGoal = world.goal;
@@ -446,6 +444,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           });
           if (onSuccess) onSuccess();
         }
+
+        // Mission task tracking (drives the side panel)
+        const changedTasks = trackerRef.current.update(dt, state, world, isWon);
+        if (changedTasks) progressCbRef.current?.(changedTasks);
 
         // Fell out of the world because the floor is missing: restart the attempt
         if (['gravity-2', 'gravity-3', 'gravity-4'].includes(lessonId) && state.y > worldH + 160) {
@@ -710,64 +712,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.textAlign = 'center';
           ctx.fillText(goalName, g.x + g.w / 2, g.y + g.h / 2 - 2);
           ctx.fillText(state.coins && state.coins.length > 0 ? `${coinsCollectedCount}/${totalCoins}` : 'EXIT', g.x + g.w / 2, g.y + g.h / 2 + 10);
-        }
-      }
-
-      // Mission checklist (move + gravity pieces): ticks off as the learner's code works
-      {
-        const sn = seenRef.current;
-        const cs = state.coins || [];
-        let tasks: Array<{ label: string; done: boolean }> | null = null;
-        if (lessonId === 'move' && cs.length === 3) {
-          tasks = [
-            { label: '1 RIGHT', done: cs[0].collected },
-            { label: '2 DOWN', done: cs[1].collected },
-            { label: '3 LEFT', done: cs[2].collected },
-            { label: '4 UP: EXIT', done: isWon }
-          ];
-        } else if (lessonId === 'gravity-1') {
-          tasks = [
-            { label: '1 SPEED UP', done: sn.vyPos },
-            { label: '2 FALL', done: sn.dropped },
-            { label: '3 LAND', done: isWon }
-          ];
-        } else if (lessonId === 'gravity-2') {
-          tasks = [
-            { label: '1 FALL', done: sn.vyPos },
-            { label: '2 LAND', done: sn.grounded },
-            { label: '3 STAY', done: isWon }
-          ];
-        } else if (lessonId === 'gravity-3') {
-          tasks = [
-            { label: '1 JUMP', done: sn.vyNeg },
-            { label: '2 GRAB THE STAR', done: isWon }
-          ];
-        } else if (lessonId === 'gravity-4' && cs.length === 2) {
-          tasks = [
-            { label: '1 RUN', done: sn.moved },
-            { label: '2 STAR 1', done: cs[0].collected },
-            { label: '3 STAR 2', done: cs[1].collected },
-            { label: '4 EXIT', done: isWon }
-          ];
-        }
-        if (tasks) {
-          const gap = 8;
-          const pillW = (worldW - 20 - gap * (tasks.length - 1)) / tasks.length;
-          const by = lessonId === 'gravity-1' ? 6 : worldH - 24;
-          tasks.forEach((t, i) => {
-            const bx = 10 + i * (pillW + gap);
-            ctx.fillStyle = t.done ? 'rgba(79, 209, 197, 0.22)' : 'rgba(11, 14, 20, 0.7)';
-            ctx.strokeStyle = t.done ? '#4FD1C5' : 'rgba(255, 255, 255, 0.22)';
-            ctx.lineWidth = 1;
-            ctx.fillRect(bx, by, pillW, 17);
-            ctx.strokeRect(bx + 0.5, by + 0.5, pillW - 1, 16);
-            ctx.fillStyle = t.done ? '#4FD1C5' : 'rgba(232, 234, 237, 0.65)';
-            ctx.font = 'bold 9px "JetBrains Mono", monospace';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${t.done ? 'DONE ' : ''}${t.label}`, bx + 7, by + 9);
-            ctx.textBaseline = 'alphabetic';
-          });
         }
       }
 

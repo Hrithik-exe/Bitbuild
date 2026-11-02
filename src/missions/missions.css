@@ -1,0 +1,444 @@
+/* ─────────────────────────────────────────────────────────────
+   Mission panel: game-style quest log with CSS 3D (no extra libs)
+   Uses the app's existing CSS variables, with fallbacks.
+   ───────────────────────────────────────────────────────────── */
+
+.mission-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+.mission-layout > .grid {
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .mission-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mission-layout > .ms-panel {
+    max-height: 340px;
+  }
+}
+
+.ms-panel {
+  --ms-teal: var(--teal, #4fd1c5);
+  --ms-violet: #8b5cf6;
+  --ms-amber: var(--amber, #f0a94e);
+  --ms-bg: var(--panel, #12151f);
+  --ms-line: var(--border, #252b3b);
+  --ms-ink: var(--text, #e8eaed);
+  --ms-dim: var(--text-muted, #828a9c);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  color: var(--ms-ink);
+  background:
+    radial-gradient(120% 60% at 0% 0%, rgba(139, 92, 246, 0.14), transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px) 0 0 / 100% 3px,
+    var(--ms-bg);
+  border: 1px solid var(--ms-line);
+  border-radius: 10px;
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+}
+.ms-panel.is-complete {
+  border-color: var(--ms-teal);
+  box-shadow: 0 0 0 1px rgba(79, 209, 197, 0.25) inset;
+}
+.ms-panel *,
+.ms-panel *::before,
+.ms-panel *::after {
+  box-sizing: border-box;
+}
+
+/* header + 3D crystal */
+.ms-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ms-head-text {
+  min-width: 0;
+  flex: 1;
+}
+.ms-eyebrow {
+  display: block;
+  font: 600 10px 'JetBrains Mono', monospace;
+  letter-spacing: 0.18em;
+  color: var(--ms-teal);
+}
+.ms-head h3 {
+  margin: 3px 0 0;
+  font-size: 18px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.ms-count {
+  font: 700 13px 'JetBrains Mono', monospace;
+  color: var(--ms-dim);
+  padding: 4px 8px;
+  border: 1px solid var(--ms-line);
+  border-radius: 999px;
+}
+.ms-panel.is-complete .ms-count {
+  color: var(--ms-teal);
+  border-color: var(--ms-teal);
+}
+
+.ms-cube {
+  --s: 38px;
+  width: var(--s);
+  height: var(--s);
+  flex: none;
+  margin: 6px 6px 6px 2px;
+  perspective: 300px;
+}
+.ms-cube-in {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: ms-spin 9s linear infinite;
+}
+.ms-cube.is-complete .ms-cube-in {
+  animation-duration: 3s;
+}
+.ms-face {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid rgba(139, 92, 246, 0.55);
+  background: rgba(139, 92, 246, 0.07);
+  transition: background 0.5s, border-color 0.5s, box-shadow 0.5s;
+}
+.ms-face.is-lit {
+  border-color: var(--ms-teal);
+  background: rgba(79, 209, 197, 0.32);
+  box-shadow: 0 0 10px rgba(79, 209, 197, 0.45) inset;
+}
+.ms-f0 { transform: rotateY(0deg) translateZ(calc(var(--s) / 2)); }
+.ms-f1 { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); }
+.ms-f2 { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
+.ms-f3 { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); }
+.ms-f4 { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); }
+.ms-f5 { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
+@keyframes ms-spin {
+  from { transform: rotateX(-24deg) rotateY(0deg); }
+  to { transform: rotateX(-24deg) rotateY(360deg); }
+}
+
+.ms-story {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ms-dim);
+}
+.ms-bar {
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(139, 92, 246, 0.16);
+  overflow: hidden;
+}
+.ms-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ms-violet), var(--ms-teal));
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* quest cards */
+.ms-tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ms-task {
+  position: relative;
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 11px 12px;
+  border: 1px solid var(--ms-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.18s ease-out, border-color 0.3s, background 0.3s, opacity 0.3s;
+  will-change: transform;
+}
+.ms-task:not(.is-active):not(.is-done) {
+  opacity: 0.55;
+}
+.ms-task.is-active {
+  border-color: var(--ms-violet);
+  background: rgba(139, 92, 246, 0.1);
+  animation: ms-pulse 2.4s ease-in-out infinite;
+}
+@keyframes ms-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18); }
+}
+.ms-task.is-done {
+  border-color: rgba(79, 209, 197, 0.55);
+  background: rgba(79, 209, 197, 0.07);
+}
+.ms-task.is-done strong {
+  color: var(--ms-teal);
+}
+.ms-task-body {
+  min-width: 0;
+  flex: 1;
+}
+.ms-task-num {
+  display: block;
+  font: 600 9px 'JetBrains Mono', monospace;
+  letter-spacing: 0.2em;
+  color: var(--ms-dim);
+}
+.ms-task strong {
+  display: block;
+  font-size: 14px;
+  margin-top: 1px;
+}
+.ms-task p {
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #c3c8e6;
+}
+.ms-hint-btn {
+  margin-top: 8px;
+  background: none;
+  border: 1px solid var(--ms-line);
+  color: var(--ms-amber);
+  font: 600 10px 'JetBrains Mono', monospace;
+  letter-spacing: 0.14em;
+  padding: 5px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ms-hint-btn:hover {
+  border-color: var(--ms-amber);
+}
+.ms-hint {
+  margin: 8px 0 0;
+  padding: 9px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 2px solid var(--ms-amber);
+  border-radius: 4px;
+  font: 11.5px/1.5 'JetBrains Mono', monospace;
+  color: #f3dcb8;
+  white-space: pre-wrap;
+  animation: ms-in 0.25s ease-out;
+}
+@keyframes ms-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* tick: circle draws, check draws, pops, sparks fly */
+.ms-check {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+}
+.ms-tick-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ms-ring {
+  fill: none;
+  stroke: rgba(130, 138, 156, 0.55);
+  stroke-width: 2;
+  stroke-dasharray: 70;
+  stroke-dashoffset: 0;
+  transition: stroke 0.3s, fill 0.3s;
+}
+.ms-tick {
+  fill: none;
+  stroke: #0b0e14;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+.ms-task.is-active .ms-ring {
+  stroke: var(--ms-violet);
+}
+.ms-task.is-done .ms-ring {
+  stroke: var(--ms-teal);
+  fill: var(--ms-teal);
+}
+.ms-task.is-done .ms-tick {
+  stroke-dashoffset: 0;
+}
+.ms-task.is-fresh .ms-check {
+  animation: ms-pop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.ms-task.is-fresh .ms-ring {
+  animation: ms-draw 0.5s ease-out;
+}
+.ms-task.is-fresh .ms-tick {
+  animation: ms-tick 0.35s 0.25s ease-out backwards;
+}
+.ms-task.is-fresh .ms-stamp {
+  animation: ms-stamp 0.6s 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+@keyframes ms-draw {
+  from { stroke-dashoffset: 70; fill: transparent; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ms-tick {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ms-pop {
+  0% { transform: scale(0.7); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@keyframes ms-stamp {
+  from { opacity: 0; transform: perspective(300px) rotateY(90deg) scale(1.6) rotate(-8deg); }
+  to { opacity: 1; transform: perspective(300px) rotateY(0) scale(1) rotate(-8deg); }
+}
+.ms-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ms-sparks i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+  border-radius: 50%;
+  background: var(--ms-amber);
+  opacity: 0;
+}
+.ms-task.is-fresh .ms-sparks i {
+  animation: ms-spark 0.7s 0.2s ease-out forwards;
+}
+@keyframes ms-spark {
+  0% { opacity: 1; transform: rotate(var(--a)) translateX(6px); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(30px) scale(0.3); }
+}
+.ms-stamp {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  font: 800 10px 'JetBrains Mono', monospace;
+  letter-spacing: 0.16em;
+  color: var(--ms-teal);
+  border: 1.5px solid var(--ms-teal);
+  border-radius: 5px;
+  padding: 2px 6px;
+  transform: rotate(-8deg);
+  opacity: 0.9;
+}
+
+/* completion banner with 3D coin */
+.ms-complete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid var(--ms-teal);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(79, 209, 197, 0.16), rgba(139, 92, 246, 0.14));
+  animation: ms-in 0.5s ease-out;
+}
+.ms-complete strong {
+  display: block;
+  font: 800 13px 'JetBrains Mono', monospace;
+  letter-spacing: 0.14em;
+  color: var(--ms-teal);
+}
+.ms-xp {
+  display: block;
+  margin-top: 2px;
+  font: 700 18px 'Space Grotesk', sans-serif;
+  color: var(--ms-amber);
+}
+.ms-coin {
+  width: 40px;
+  height: 40px;
+  perspective: 240px;
+}
+.ms-coin-in {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe4a8, var(--ms-amber) 60%, #a8721f);
+  display: grid;
+  place-items: center;
+  transform-style: preserve-3d;
+  animation: ms-flip 2.4s linear infinite;
+}
+.ms-coin-in svg {
+  width: 62%;
+  height: 62%;
+  fill: #7a4d10;
+}
+@keyframes ms-flip {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+.ms-next {
+  margin-left: auto;
+  background: var(--ms-teal);
+  color: #07110f;
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font: 800 11px 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.ms-next:hover {
+  transform: translateY(-2px);
+}
+
+.sr-only-ms {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.ms-panel :focus-visible {
+  outline: 2px solid var(--ms-teal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-panel *,
+  .ms-panel *::before,
+  .ms-panel *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ms-task {
+    transform: none;
+  }
+  .ms-task.is-done .ms-tick {
+    stroke-dashoffset: 0;
+  }
+}

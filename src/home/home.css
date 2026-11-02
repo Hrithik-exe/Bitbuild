@@ -629,8 +629,11 @@
   border: 1px dashed var(--bb-line);
   border-radius: 12px;
 }
-.bb-lab .grid {
+.bb-lab .mission-layout {
   height: 470px;
+}
+.bb-lab .grid {
+  height: 100%;
 }
 .bb-lab .panel {
   background: #0a0916;
@@ -921,6 +924,9 @@
 @media (max-width: 860px) {
   .bb-demo-body {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .bb-lab .mission-layout {
+    height: auto;
   }
   .bb-lab .grid {
     height: auto;
