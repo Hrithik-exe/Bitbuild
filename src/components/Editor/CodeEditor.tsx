@@ -7,7 +7,8 @@ import { python } from '@codemirror/lang-python';
 import { cpp } from '@codemirror/lang-cpp';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { Play, RotateCcw, FileCode, AlertCircle, Cpu } from 'lucide-react';
-import type { Language, ErrorLineInfo } from '../../types/lesson';
+import type { Language, ErrorLineInfo, DialogueLine } from '../../types/lesson';
+import { FloatingMentors } from '../Mentor/FloatingMentors';
 
 interface CodeEditorProps {
   code: string;
@@ -19,6 +20,13 @@ interface CodeEditorProps {
   hasError?: boolean;
   errorInfo?: ErrorLineInfo | null;
   engineStatus?: string;
+  dialogueLines?: DialogueLine[];
+  onNextLesson?: () => void;
+  onPrevLesson?: () => void;
+  hasNextLesson?: boolean;
+  hasPrevLesson?: boolean;
+  nextLessonLabel?: string;
+  prevLessonLabel?: string;
 }
 
 // CodeMirror 6 Line Error Highlight & Gutter Indicator Extension
@@ -99,7 +107,14 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   filename = 'update.js',
   hasError = false,
   errorInfo = null,
-  engineStatus = ''
+  engineStatus = '',
+  dialogueLines = [],
+  onNextLesson,
+  onPrevLesson,
+  hasNextLesson = false,
+  hasPrevLesson = false,
+  nextLessonLabel = '',
+  prevLessonLabel = ''
 }) => {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -228,7 +243,20 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   return (
     <div className={`panel editor-panel ${hasError ? 'border-error' : ''}`}>
-      <div className="panel-head">
+      {/* Floating Mentor Characters in Top Corners */}
+      {dialogueLines && dialogueLines.length > 0 && (
+        <FloatingMentors
+          dialogueLines={dialogueLines}
+          onNextLesson={onNextLesson}
+          onPrevLesson={onPrevLesson}
+          hasNextLesson={hasNextLesson}
+          hasPrevLesson={hasPrevLesson}
+          nextLessonLabel={nextLessonLabel}
+          prevLessonLabel={prevLessonLabel}
+        />
+      )}
+
+      <div className="panel-head editor-panel-head">
         <div className="label">
           <FileCode size={14} className="accent-icon" />
           <span>{filename}</span>

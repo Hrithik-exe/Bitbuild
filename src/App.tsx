@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { CodeEditor } from './components/Editor/CodeEditor';
 import { GameCanvas } from './components/Canvas/GameCanvas';
-import { LessonNote } from './components/LessonNote';
-import { MentorBox } from './components/Mentor/MentorBox';
 import { MissionPanel } from './missions/MissionPanel';
 import { getMission } from './missions/missionData';
 import { SkillTree } from './components/SkillTree';
@@ -196,7 +194,6 @@ export function App() {
     ? activePiece.code[language] || activePiece.code.javascript
     : currentLesson.code[language] || currentLesson.code.javascript;
 
-  const activeNote = activePiece ? activePiece.note : currentLesson.note;
   const activeMentorLines = activePiece ? activePiece.mentorLines : currentLesson.mentorLines;
   const activeSimId = activePiece ? activePiece.id : currentLesson.id;
 
@@ -456,6 +453,13 @@ export function App() {
                 hasError={isError}
                 errorInfo={errorInfo}
                 engineStatus={engineStatus}
+                dialogueLines={activeMentorLines}
+                onNextLesson={goToNextStep}
+                onPrevLesson={goToPrevStep}
+                hasNextLesson={hasNext}
+                hasPrevLesson={hasPrev}
+                nextLessonLabel={nextLabel}
+                prevLessonLabel={prevLabel}
               />
 
               <GameCanvas
@@ -472,20 +476,6 @@ export function App() {
               />
             </div>
           </div>
-
-          {/* Undertale-style Procedural Mentor Voice Dialogue with Step Navigation */}
-          <MentorBox
-            dialogueLines={activeMentorLines}
-            onNextLesson={goToNextStep}
-            onPrevLesson={goToPrevStep}
-            hasNextLesson={hasNext}
-            hasPrevLesson={hasPrev}
-            nextLessonLabel={nextLabel}
-            prevLessonLabel={prevLabel}
-          />
-
-          {/* Detailed Lesson Instructions & Notes */}
-          <LessonNote note={activeNote} />
         </div>
       )}
 

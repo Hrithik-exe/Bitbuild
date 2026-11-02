@@ -1,0 +1,463 @@
+/* ─────────────────────────────────────────────────────────────
+   Floating Mentor Companions (Pixel & Byte) & Comic Dialogue
+   Mounted in the top corners of the Code Panel
+   ───────────────────────────────────────────────────────────── */
+
+.floating-mentors-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* Float positioning in corners */
+.mentor-float-wrapper {
+  position: absolute;
+  top: 4px;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.mentor-float-wrapper.float-left {
+  left: 8px;
+  align-items: flex-start;
+}
+
+.mentor-float-wrapper.float-right {
+  right: 8px;
+  align-items: flex-end;
+}
+
+/* Avatar Buttons */
+.mentor-avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+}
+
+.mentor-avatar-btn:hover {
+  transform: scale(1.1);
+}
+
+.mentor-avatar-btn:active {
+  transform: scale(0.96);
+}
+
+/* Halos & Floating Hover Keyframes */
+.character-halo {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(6px);
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.pixel-halo {
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.6) 0%, transparent 70%);
+}
+
+.byte-halo {
+  background: radial-gradient(circle, rgba(240, 169, 78, 0.6) 0%, transparent 70%);
+}
+
+.is-speaking .character-halo {
+  opacity: 0.9;
+  filter: blur(8px);
+}
+
+.pixel-bob {
+  animation: bobPixel 3.2s ease-in-out infinite;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.byte-bob {
+  animation: bobByte 3.6s ease-in-out infinite;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@keyframes bobPixel {
+  0%, 100% {
+    transform: translateY(0px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(1.5deg);
+  }
+}
+
+@keyframes bobByte {
+  0%, 100% {
+    transform: translateY(0px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-4.5px) rotate(-1.5deg);
+  }
+}
+
+/* Avatar Heads */
+.avatar-head {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  border: 2px solid;
+}
+
+.pixel-head {
+  background: linear-gradient(135deg, #0e2e38 0%, #061920 100%);
+  border-color: #22d3ee;
+}
+
+.byte-head {
+  background: linear-gradient(135deg, #38240e 0%, #1c1106 100%);
+  border-color: #f0a94e;
+}
+
+.pixel-icon {
+  color: #22d3ee;
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.8));
+}
+
+.byte-icon {
+  color: #f0a94e;
+  filter: drop-shadow(0 0 4px rgba(240, 169, 78, 0.8));
+}
+
+.antenna-glow {
+  position: absolute;
+  top: -4px;
+  width: 5px;
+  height: 5px;
+  background: #22d3ee;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #22d3ee;
+  animation: blinkAntenna 2s infinite;
+}
+
+.byte-glow {
+  background: #f0a94e;
+  box-shadow: 0 0 6px #f0a94e;
+}
+
+@keyframes blinkAntenna {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+
+/* Avatar Nametags */
+.avatar-nametag {
+  margin-top: 2px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.pixel-tag {
+  background: rgba(6, 25, 32, 0.9);
+  color: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.4);
+}
+
+.byte-tag {
+  background: rgba(28, 17, 6, 0.9);
+  color: #f0a94e;
+  border-color: rgba(240, 169, 78, 0.4);
+}
+
+/* Alert Pill (when minimized) */
+.mentor-alert-pill {
+  position: absolute;
+  top: -4px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  animation: bounceAlert 1.8s infinite;
+}
+
+.pixel-alert {
+  right: -10px;
+  background: #22d3ee;
+  color: #061920;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
+}
+
+.byte-alert {
+  left: -14px;
+  background: #f0a94e;
+  color: #1c1106;
+  box-shadow: 0 0 8px rgba(240, 169, 78, 0.7);
+}
+
+@keyframes bounceAlert {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Comic Dialogue Balloons (Comic Speech Bubble Aesthetic)
+   ───────────────────────────────────────────────────────────── */
+
+.comic-balloon {
+  position: absolute;
+  top: 48px;
+  width: 290px;
+  max-width: 85vw;
+  background: #111420;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 2px solid;
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  z-index: 40;
+  pointer-events: auto;
+  box-shadow:
+    4px 5px 0px rgba(0, 0, 0, 0.8),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  animation: popComic 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: top;
+}
+
+@keyframes popComic {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.comic-balloon-left {
+  left: 0;
+  border-color: #22d3ee;
+}
+
+.comic-balloon-right {
+  right: 0;
+  border-color: #f0a94e;
+}
+
+/* Comic Speech Bubble Tails */
+.comic-tail {
+  position: absolute;
+  top: -8px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+}
+
+.comic-tail-left {
+  left: 18px;
+  border-bottom: 8px solid #22d3ee;
+}
+
+.comic-tail-right {
+  right: 18px;
+  border-bottom: 8px solid #f0a94e;
+}
+
+/* Comic Balloon Header */
+.comic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+  padding-bottom: 6px;
+}
+
+.comic-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.pixel-badge {
+  background: rgba(34, 211, 238, 0.18);
+  color: #22d3ee;
+}
+
+.byte-badge {
+  background: rgba(240, 169, 78, 0.18);
+  color: #f0a94e;
+}
+
+.comic-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #828a9c;
+  font-weight: 600;
+}
+
+.comic-close-btn {
+  background: none;
+  border: none;
+  color: #828a9c;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.comic-close-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Comic Balloon Body */
+.comic-body {
+  margin: 0 0 10px;
+  min-height: 48px;
+}
+
+.comic-text {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #f1f3f8;
+  word-break: break-word;
+}
+
+.comic-cursor {
+  display: inline-block;
+  width: 5px;
+  height: 11px;
+  background: #22d3ee;
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blinkCursor 0.8s steps(2) infinite;
+}
+
+.byte-cursor {
+  background: #f0a94e;
+}
+
+@keyframes blinkCursor {
+  50% { opacity: 0; }
+}
+
+/* Comic Balloon Footer */
+.comic-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-top: 7px;
+}
+
+.comic-tip-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.comic-arrow-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e8eaed;
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.comic-arrow-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.comic-next-btn {
+  background: rgba(34, 211, 238, 0.18);
+  border: 1px solid rgba(34, 211, 238, 0.5);
+  color: #22d3ee;
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.comic-next-btn:hover {
+  background: rgba(34, 211, 238, 0.3);
+  transform: translateY(-1px);
+}
+
+.byte-next-btn {
+  background: rgba(240, 169, 78, 0.18);
+  border-color: rgba(240, 169, 78, 0.5);
+  color: #f0a94e;
+}
+
+.byte-next-btn:hover {
+  background: rgba(240, 169, 78, 0.3);
+}
+
+.comic-mission-btn {
+  background: #f0a94e;
+  border: 1px solid #f0a94e;
+  color: #120e06;
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 0 10px rgba(240, 169, 78, 0.4);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.comic-mission-btn:hover {
+  background: #f5b969;
+  transform: translateY(-1px);
+}

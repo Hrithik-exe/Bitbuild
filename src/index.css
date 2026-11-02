@@ -393,6 +393,18 @@ body:has(.app-container) {
   border-color: var(--error);
 }
 
+.editor-panel {
+  position: relative;
+  overflow: visible !important;
+}
+
+.editor-panel-head {
+  padding-left: 56px !important;
+  padding-right: 56px !important;
+  position: relative;
+  min-height: 42px;
+}
+
 .panel-head {
   display: flex;
   align-items: center;
@@ -501,19 +513,24 @@ button:active {
 
 /* Simulation Body */
 .sim-body {
-  padding: 8px 12px;
+  padding: 6px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
+  gap: 6px;
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .canvas-container {
   position: relative;
   width: 100%;
   max-width: 480px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .canvas-container canvas {
@@ -522,6 +539,8 @@ button:active {
   border-radius: 8px;
   width: 100%;
   max-width: 480px;
+  height: auto;
+  aspect-ratio: 480 / 280;
   display: block;
 }
 
